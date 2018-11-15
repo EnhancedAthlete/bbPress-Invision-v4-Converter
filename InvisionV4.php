@@ -39,7 +39,7 @@ class InvisionV4 extends BBP_Converter_Base {
 
 		// Old forum id (Stored in postmeta)
 		$this->field_map[] = array(
-			'from_tablename'  => 'forums',
+			'from_tablename'  => 'forums_forums',
 			'from_fieldname'  => 'id',
 			'to_type'         => 'forum',
 			'to_fieldname'    => '_bbp_old_forum_id'
@@ -47,7 +47,7 @@ class InvisionV4 extends BBP_Converter_Base {
 
 		// Forum parent id (If no parent, then 0, Stored in postmeta)
 		$this->field_map[] = array(
-			'from_tablename'  => 'forums',
+			'from_tablename'  => 'forums_forums',
 			'from_fieldname'  => 'parent_id',
 			'to_type'         => 'forum',
 			'to_fieldname'    => '_bbp_old_forum_parent_id'
@@ -55,7 +55,7 @@ class InvisionV4 extends BBP_Converter_Base {
 
 		// Forum topic count (Stored in postmeta)
 		$this->field_map[] = array(
-			'from_tablename' => 'forums',
+			'from_tablename' => 'forums_forums',
 			'from_fieldname' => 'topics',
 			'to_type'        => 'forum',
 			'to_fieldname'   => '_bbp_topic_count'
@@ -63,7 +63,7 @@ class InvisionV4 extends BBP_Converter_Base {
 
 		// Forum reply count (Stored in postmeta)
 		$this->field_map[] = array(
-			'from_tablename' => 'forums',
+			'from_tablename' => 'forums_forums',
 			'from_fieldname' => 'posts',
 			'to_type'        => 'forum',
 			'to_fieldname'   => '_bbp_reply_count'
@@ -71,7 +71,7 @@ class InvisionV4 extends BBP_Converter_Base {
 
 		// Forum total topic count (Stored in postmeta)
 		$this->field_map[] = array(
-			'from_tablename' => 'forums',
+			'from_tablename' => 'forums_forums',
 			'from_fieldname' => 'topics',
 			'to_type'        => 'forum',
 			'to_fieldname'   => '_bbp_total_topic_count'
@@ -79,23 +79,28 @@ class InvisionV4 extends BBP_Converter_Base {
 
 		// Forum total reply count (Stored in postmeta)
 		$this->field_map[] = array(
-			'from_tablename' => 'forums',
+			'from_tablename' => 'forums_forums',
 			'from_fieldname' => 'posts',
 			'to_type'        => 'forum',
 			'to_fieldname'   => '_bbp_total_reply_count'
 		);
 
 		// Forum title.
+		// TODO pass id to a callback and get actual name from:
+		// TODO: now it just uses the [seo] slug
+		// SELECT * FROM ipbforum.core_sys_lang_words WHERE word_app = 'forums'
+		// SELECT * FROM ipbforum.core_sys_lang_words WHERE word_app = 'forums' AND word_key LIKE 'forums_forum_%'
+		// SELECT word_default FROM ipbforum.core_sys_lang_words WHERE word_app = 'forums' AND word_key = 'forums_forum_1'
 		$this->field_map[] = array(
-			'from_tablename'  => 'forums',
-			'from_fieldname'  => 'name',
+			'from_tablename'  => 'forums_forums',
+			'from_fieldname'  => 'name_seo',
 			'to_type'         => 'forum',
 			'to_fieldname'    => 'post_title'
 		);
 
-		// Forum slug (Clean name to avoid confilcts)
+		// Forum slug (Clean name to avoid conflicts)
 		$this->field_map[] = array(
-			'from_tablename'  => 'forums',
+			'from_tablename'  => 'forums_forums',
 			'from_fieldname'  => 'name_seo',
 			'to_type'         => 'forum',
 			'to_fieldname'    => 'post_name',
@@ -103,25 +108,31 @@ class InvisionV4 extends BBP_Converter_Base {
 		);
 
 		// Forum description.
+		// TODO pass id to a callback and get actual name from:
+		// TODO: now it just uses the [seo] slug
+		// SELECT word_default FROM ipbforum.core_sys_lang_words WHERE word_app = 'forums' AND word_key = 'forums_forum_1_desc'
+		// Strip HTML from description
 		$this->field_map[] = array(
-			'from_tablename'  => 'forums',
-			'from_fieldname'  => 'description',
+			'from_tablename'  => 'forums_forums',
+			'from_fieldname'  => 'name_seo',
 			'to_type'         => 'forum',
 			'to_fieldname'    => 'post_content',
 			'callback_method' => 'callback_null'
 		);
 
+
 		// Forum display order (Starts from 1)
 		$this->field_map[] = array(
-			'from_tablename'  => 'forums',
+			'from_tablename'  => 'forums_forums',
 			'from_fieldname'  => 'position',
 			'to_type'         => 'forum',
 			'to_fieldname'    => 'menu_order'
 		);
 
 		// Forum type (Forum = 0 or Category = -1, Stored in postmeta)
+		// parent_id returns 0 or -1 and the callback translates that to forum or category
 		$this->field_map[] = array(
-			'from_tablename'  => 'forums',
+			'from_tablename'  => 'forums_forums',
 			'from_fieldname'  => 'parent_id',
 			'to_type'         => 'forum',
 			'to_fieldname'    => '_bbp_forum_type',
@@ -136,6 +147,8 @@ class InvisionV4 extends BBP_Converter_Base {
 		);
 
 		// Forum dates.
+		// I don't see anywhere IPB records the forum creation dates, so it defaults to now.
+		// Later figure out the oldest post in the forum.
 		$this->field_map[] = array(
 			'to_type'         => 'forum',
 			'to_fieldname'    => 'post_date',
@@ -161,7 +174,7 @@ class InvisionV4 extends BBP_Converter_Base {
 
 		// Old topic id (Stored in postmeta)
 		$this->field_map[] = array(
-			'from_tablename'  => 'topics',
+			'from_tablename'  => 'forums_topics',
 			'from_fieldname'  => 'tid',
 			'to_type'         => 'topic',
 			'to_fieldname'    => '_bbp_old_topic_id'
@@ -169,7 +182,7 @@ class InvisionV4 extends BBP_Converter_Base {
 
 		// Topic reply count (Stored in postmeta)
 		$this->field_map[] = array(
-			'from_tablename'  => 'topics',
+			'from_tablename'  => 'forums_topics',
 			'from_fieldname'  => 'posts',
 			'to_type'         => 'topic',
 			'to_fieldname'    => '_bbp_reply_count',
@@ -178,7 +191,7 @@ class InvisionV4 extends BBP_Converter_Base {
 
 		// Topic parent forum id (If no parent, then 0. Stored in postmeta)
 		$this->field_map[] = array(
-			'from_tablename'  => 'topics',
+			'from_tablename'  => 'forums_topics',
 			'from_fieldname'  => 'forum_id',
 			'to_type'         => 'topic',
 			'to_fieldname'    => '_bbp_forum_id',
@@ -187,7 +200,7 @@ class InvisionV4 extends BBP_Converter_Base {
 
 		// Topic author.
 		$this->field_map[] = array(
-			'from_tablename'  => 'topics',
+			'from_tablename'  => 'forums_topics',
 			'from_fieldname'  => 'starter_id',
 			'to_type'         => 'topic',
 			'to_fieldname'    => 'post_author',
@@ -197,11 +210,11 @@ class InvisionV4 extends BBP_Converter_Base {
 		// Topic content.
 		// Note: We join the posts table because topics do not have content.
 		$this->field_map[] = array(
-			'from_tablename'  => 'posts',
+			'from_tablename'  => 'forums_posts',
 			'from_fieldname'  => 'post',
-			'join_tablename'  => 'topics',
+			'join_tablename'  => 'forums_topics',
 			'join_type'       => 'INNER',
-			'join_expression' => 'ON(topics.tid = posts.topic_id) WHERE posts.new_topic = 1',
+			'join_expression' => 'ON(forums_topics.tid = forums_posts.topic_id) WHERE forums_posts.new_topic = 1',
 			'to_type'         => 'topic',
 			'to_fieldname'    => 'post_content',
 			'callback_method' => 'callback_html'
@@ -209,7 +222,7 @@ class InvisionV4 extends BBP_Converter_Base {
 
 		// Topic title.
 		$this->field_map[] = array(
-			'from_tablename'  => 'topics',
+			'from_tablename'  => 'forums_topics',
 			'from_fieldname'  => 'title',
 			'to_type'         => 'topic',
 			'to_fieldname'    => 'post_title'
@@ -217,8 +230,8 @@ class InvisionV4 extends BBP_Converter_Base {
 
 		// Topic slug (Clean name to avoid conflicts)
 		$this->field_map[] = array(
-			'from_tablename'  => 'topics',
-			'from_fieldname'  => 'title',
+			'from_tablename'  => 'forums_topics',
+			'from_fieldname'  => 'title_seo',
 			'to_type'         => 'topic',
 			'to_fieldname'    => 'post_name',
 			'callback_method' => 'callback_slug'
@@ -226,7 +239,7 @@ class InvisionV4 extends BBP_Converter_Base {
 
 		// Topic parent forum id (If no parent, then 0)
 		$this->field_map[] = array(
-			'from_tablename'  => 'topics',
+			'from_tablename'  => 'forums_topics',
 			'from_fieldname'  => 'forum_id',
 			'to_type'         => 'topic',
 			'to_fieldname'    => 'post_parent',
@@ -235,7 +248,7 @@ class InvisionV4 extends BBP_Converter_Base {
 
 		// Sticky status (Stored in postmeta)
 		$this->field_map[] = array(
-			'from_tablename'  => 'topics',
+			'from_tablename'  => 'forums_topics',
 			'from_fieldname'  => 'pinned',
 			'to_type'         => 'topic',
 			'to_fieldname'    => '_bbp_old_sticky_status_id',
@@ -243,36 +256,37 @@ class InvisionV4 extends BBP_Converter_Base {
 		);
 
 		// Topic dates.
+		// unix time
 		$this->field_map[] = array(
-			'from_tablename'  => 'topics',
+			'from_tablename'  => 'forums_topics',
 			'from_fieldname'  => 'start_date',
 			'to_type'         => 'topic',
 			'to_fieldname'    => 'post_date',
 			'callback_method' => 'callback_datetime'
 		);
 		$this->field_map[] = array(
-			'from_tablename'  => 'topics',
+			'from_tablename'  => 'forums_topics',
 			'from_fieldname'  => 'start_date',
 			'to_type'         => 'topic',
 			'to_fieldname'    => 'post_date_gmt',
 			'callback_method' => 'callback_datetime'
 		);
 		$this->field_map[] = array(
-			'from_tablename'  => 'topics',
+			'from_tablename'  => 'forums_topics',
 			'from_fieldname'  => 'last_post',
 			'to_type'         => 'topic',
 			'to_fieldname'    => 'post_modified',
 			'callback_method' => 'callback_datetime'
 		);
 		$this->field_map[] = array(
-			'from_tablename'  => 'topics',
+			'from_tablename'  => 'forums_topics',
 			'from_fieldname'  => 'last_post',
 			'to_type'         => 'topic',
 			'to_fieldname'    => 'post_modified_gmt',
 			'callback_method' => 'callback_datetime'
 		);
 		$this->field_map[] = array(
-			'from_tablename' => 'topics',
+			'from_tablename' => 'forums_topics',
 			'from_fieldname' => 'last_post',
 			'to_type'        => 'topic',
 			'to_fieldname'   => '_bbp_last_active_time',
@@ -302,15 +316,16 @@ class InvisionV4 extends BBP_Converter_Base {
 
 		// Old reply id (Stored in postmeta)
 		$this->field_map[] = array(
-			'from_tablename'  => 'posts',
+			'from_tablename'  => 'forums_posts',
 			'from_fieldname'  => 'pid',
+			'from_expression' => 'WHERE new_topic = 0',
 			'to_type'         => 'reply',
 			'to_fieldname'    => '_bbp_old_reply_id'
 		);
 
 		// Reply parent forum id (If no parent, then 0. Stored in postmeta)
 		$this->field_map[] = array(
-			'from_tablename'  => 'posts',
+			'from_tablename'  => 'forums_posts',
 			'from_fieldname'  => 'topic_id',
 			'to_type'         => 'reply',
 			'to_fieldname'    => '_bbp_forum_id',
@@ -319,7 +334,7 @@ class InvisionV4 extends BBP_Converter_Base {
 
 		// Reply parent topic id (If no parent, then 0. Stored in postmeta)
 		$this->field_map[] = array(
-			'from_tablename'  => 'posts',
+			'from_tablename'  => 'forums_posts',
 			'from_fieldname'  => 'topic_id',
 			'to_type'         => 'reply',
 			'to_fieldname'    => '_bbp_topic_id',
@@ -328,7 +343,7 @@ class InvisionV4 extends BBP_Converter_Base {
 
 		// Reply author ip (Stored in postmeta)
 		$this->field_map[] = array(
-			'from_tablename'  => 'posts',
+			'from_tablename'  => 'forums_posts',
 			'from_fieldname'  => 'ip_address',
 			'to_type'         => 'reply',
 			'to_fieldname'    => '_bbp_author_ip'
@@ -336,7 +351,7 @@ class InvisionV4 extends BBP_Converter_Base {
 
 		// Reply author.
 		$this->field_map[] = array(
-			'from_tablename'  => 'posts',
+			'from_tablename'  => 'forums_posts',
 			'from_fieldname'  => 'author_id',
 			'to_type'         => 'reply',
 			'to_fieldname'    => 'post_author',
@@ -345,7 +360,7 @@ class InvisionV4 extends BBP_Converter_Base {
 
 		// Reply content.
 		$this->field_map[] = array(
-			'from_tablename'  => 'posts',
+			'from_tablename'  => 'forums_posts',
 			'from_fieldname'  => 'post',
 			'to_type'         => 'reply',
 			'to_fieldname'    => 'post_content',
@@ -354,7 +369,7 @@ class InvisionV4 extends BBP_Converter_Base {
 
 		// Reply parent topic id (If no parent, then 0)
 		$this->field_map[] = array(
-			'from_tablename'  => 'posts',
+			'from_tablename'  => 'forums_posts',
 			'from_fieldname'  => 'topic_id',
 			'to_type'         => 'reply',
 			'to_fieldname'    => 'post_parent',
@@ -363,28 +378,28 @@ class InvisionV4 extends BBP_Converter_Base {
 
 		// Reply dates.
 		$this->field_map[] = array(
-			'from_tablename'  => 'posts',
+			'from_tablename'  => 'forums_posts',
 			'from_fieldname'  => 'post_date',
 			'to_type'         => 'reply',
 			'to_fieldname'    => 'post_date',
 			'callback_method' => 'callback_datetime'
 		);
 		$this->field_map[] = array(
-			'from_tablename'  => 'posts',
+			'from_tablename'  => 'forums_posts',
 			'from_fieldname'  => 'post_date',
 			'to_type'         => 'reply',
 			'to_fieldname'    => 'post_date_gmt',
 			'callback_method' => 'callback_datetime'
 		);
 		$this->field_map[] = array(
-			'from_tablename'  => 'posts',
+			'from_tablename'  => 'forums_posts',
 			'from_fieldname'  => 'edit_time',
 			'to_type'         => 'reply',
 			'to_fieldname'    => 'post_modified',
 			'callback_method' => 'callback_datetime'
 		);
 		$this->field_map[] = array(
-			'from_tablename'  => 'posts',
+			'from_tablename'  => 'forums_posts',
 			'from_fieldname'  => 'edit_time',
 			'to_type'         => 'reply',
 			'to_fieldname'    => 'post_modified_gmt',
@@ -395,7 +410,7 @@ class InvisionV4 extends BBP_Converter_Base {
 
 		// Store old user id (Stored in usermeta)
 		$this->field_map[] = array(
-			'from_tablename'  => 'members',
+			'from_tablename'  => 'core_members',
 			'from_fieldname'  => 'member_id',
 			'to_type'         => 'user',
 			'to_fieldname'    => '_bbp_old_user_id'
@@ -403,7 +418,7 @@ class InvisionV4 extends BBP_Converter_Base {
 
 		// Store old user password (Stored in usermeta serialized with salt)
 		$this->field_map[] = array(
-			'from_tablename'  => 'members',
+			'from_tablename'  => 'core_members',
 			'from_fieldname'  => 'members_pass_hash',
 			'to_type'         => 'user',
 			'to_fieldname'    => '_bbp_password',
@@ -412,7 +427,7 @@ class InvisionV4 extends BBP_Converter_Base {
 
 		// Store old user salt (This is only used for the SELECT row info for the above password save)
 		$this->field_map[] = array(
-			'from_tablename'  => 'members',
+			'from_tablename'  => 'core_members',
 			'from_fieldname'  => 'members_pass_salt',
 			'to_type'         => 'user',
 			'to_fieldname'    => ''
@@ -427,7 +442,7 @@ class InvisionV4 extends BBP_Converter_Base {
 
 		// User name.
 		$this->field_map[] = array(
-			'from_tablename'  => 'members',
+			'from_tablename'  => 'core_members',
 			'from_fieldname'  => 'name',
 			'to_type'         => 'user',
 			'to_fieldname'    => 'user_login'
@@ -435,7 +450,7 @@ class InvisionV4 extends BBP_Converter_Base {
 
 		// User nice name.
 		$this->field_map[] = array(
-			'from_tablename'  => 'members',
+			'from_tablename'  => 'core_members',
 			'from_fieldname'  => 'name',
 			'to_type'         => 'user',
 			'to_fieldname'    => 'user_nicename'
@@ -443,7 +458,7 @@ class InvisionV4 extends BBP_Converter_Base {
 
 		// User email.
 		$this->field_map[] = array(
-			'from_tablename'  => 'members',
+			'from_tablename'  => 'core_members',
 			'from_fieldname'  => 'email',
 			'to_type'         => 'user',
 			'to_fieldname'    => 'user_email'
@@ -451,7 +466,7 @@ class InvisionV4 extends BBP_Converter_Base {
 
 		// User registered.
 		$this->field_map[] = array(
-			'from_tablename'  => 'members',
+			'from_tablename'  => 'core_members',
 			'from_fieldname'  => 'joined',
 			'to_type'         => 'user',
 			'to_fieldname'    => 'user_registered',
@@ -460,8 +475,8 @@ class InvisionV4 extends BBP_Converter_Base {
 
 		// User display name.
 		$this->field_map[] = array(
-			'from_tablename' => 'members',
-			'from_fieldname' => 'members_display_name',
+			'from_tablename' => 'core_members',
+			'from_fieldname' => 'name',
 			'to_type'        => 'user',
 			'to_fieldname'   => 'display_name'
 		);
@@ -533,26 +548,13 @@ class InvisionV4 extends BBP_Converter_Base {
 	/**
 	 * This method is to take the pass out of the database and compare
 	 * to a pass the user has typed in.
+	 *
+	 * Hash function found in IPB Member.php line 2507 encryptedPassword()
 	 */
 	public function authenticate_pass( $password, $serialized_pass ) {
 		$pass_array = unserialize( $serialized_pass );
-		return ( $pass_array['hash'] == md5( md5( $pass_array['salt'] ) . md5( $this->to_char( $password ) ) ) );
-	}
 
-	private function to_char( $input ) {
-		$output = "";
-		for ( $i = 0; $i < strlen( $input ); $i++ ) {
-			$j = ord( $input{$i} );
-			if ( ( $j >= 65 && $j <= 90 )
-			     || ( $j >= 97 && $j <= 122 )
-			     || ( $j >= 48 && $j <= 57 ) )
-			{
-				$output .= $input{$i};
-			} else {
-				$output .= "&#" . ord( $input{$i} ) . ";";
-			}
-		}
-		return $output;
+		return ( $pass_array['hash'] == crypt( $password, '$2a$13$' . $pass_array['salt'] ) );
 	}
 
 	/**
