@@ -1,20 +1,20 @@
 <?php
 
 /**
- * bbPress Invision Converter
+ * bbPress Invision v4 Converter
  *
  * @package bbPress
  * @subpackage Converters
  */
 
 /**
- * Implementation of Invision Power Board v3.x converter.
+ * Implementation of Invision Community (Power Board) v4.x forum converter.
  *
- * @since 2.3.0 bbPress (r4713)
+ * @since 2.6-rc-6 bbPress (r6854)
  *
- * @link Codex Docs https://codex.bbpress.org/import-forums/invision
+ * @link https://github.com/EnhancedAthlete/bbPress-Invision-v4-Converter
  */
-class Invision extends BBP_Converter_Base {
+class InvisionV4 extends BBP_Converter_Base {
 
 	/**
 	 * Main Constructor
@@ -422,7 +422,7 @@ class Invision extends BBP_Converter_Base {
 		$this->field_map[] = array(
 			'to_type'         => 'user',
 			'to_fieldname'    => '_bbp_class',
-			'default' => 'Invision'
+			'default' => 'InvisionV4'
 		);
 
 		// User name.
