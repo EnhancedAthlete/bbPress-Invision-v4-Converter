@@ -6,9 +6,10 @@ Tested from Invision Community 4.3.6 to [bbPress 2.6-rc-6](https://bbpress.org/d
 
 ## Installation and Use
 
-1. Drop `InvisionV4.php` into `wp-content/plugins/bbpress/includes/admin/converters/`
-2. Navigate to WordPress Admin Dashboard / Tools / Forums / Import Forums at `/wp-admin/tools.php?page=bbp-converter`
-3. Fill in the source database details and hit `Start`
+1. Edit `InvisionV4.php` `import_infusion_media()` function at [lines 646 - 651](https://github.com/EnhancedAthlete/bbPress-Invision-v4-Converter/blob/089ffcca90606ea844973d52780d61954b3a6c2b/InvisionV4.php#L646-L651) to add the source server uploads url for file import.
+2. Drop `InvisionV4.php` into `wp-content/plugins/bbpress/includes/admin/converters/`
+3. Navigate to WordPress Admin Dashboard / Tools / Forums / Import Forums at `/wp-admin/tools.php?page=bbp-converter`
+4. Fill in the source database details and hit `Start`
 
 ## TODO
 
@@ -41,7 +42,7 @@ How to run this automatically?
 
 ### Files
 
-With the converter as-is, you need to edit the PHP ~line 650 `import_infusion_media()` to set the source server uploads http path and delete a `return` line I have added to prevent this code running without configuration.
+With the converter as-is, you need to edit the PHP [lines 646 - 651](https://github.com/EnhancedAthlete/bbPress-Invision-v4-Converter/blob/089ffcca90606ea844973d52780d61954b3a6c2b/InvisionV4.php#L646-L651) in `import_infusion_media()` function to set the source server uploads http path and delete a `return` line I have added to prevent this code running without configuration.
 
 A ticket exists for a general implementation of this on bbPress Trac: [Add support for bbPress converter to import attachments](https://bbpress.trac.wordpress.org/ticket/2596).
 
