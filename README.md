@@ -41,17 +41,65 @@ How to run this automatically?
 
 ### Files
 
-Files need to be imported into the wp-content/uploads directory and their links/embeds updated.
+With the converter as-is, you need to edit the PHP ~line 650 `import_infusion_media()` to set the source server uploads http path and delete a `return` line I have added to prevent this code running without configuration.
 
-Line 616 currently links to the embedded file
+A ticket exists for a general implementation of this on bbPress Trac: [Add support for bbPress converter to import attachments](https://bbpress.trac.wordpress.org/ticket/2596).
 
-`preg_replace( '/\[media\]/', '',   $invision_markup );`
+An IPB message with embedded local images, as retrieved from the database during migration, looks like:
 
-``SELECT * FROM ipbforum.core_sys_conf_settings WHERE `conf_key` = 'site_address';` - seems the correct place to store the site address in IPB but it was null in our installation. I don't see where it is set in the UI and when I changed it in MySQL I didn't see that reflected anywhere.
+```
+<p>Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</p>
 
-It is set in `/conf_global.php` as `$INFO['base_url']` but we only have a database connection and the converter/importer UI doesn't ask for the site's address.
+<p><a href="<fileStore.core_Attachment>/monthly_2018_11/ullamcolaboris.jpg.b5f52a194630418caa8ce3a71c2110b7.jpg" class="ipsAttachLink ipsAttachLink_image"><img data-fileid="1889" src="<fileStore.core_Attachment>/monthly_2018_11/ullamcolaboris.thumb.jpg.cfc0eea1f500536dd41befe90b682768.jpg" class="ipsImage ipsImage_thumbnailed" alt="ullamcolaboris.jpg"></a></p>
 
-I'm not sure if there's real value importing into the WordPress media library rather than just filesystem.
+<p>Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.</p>
+
+<p><a href="<fileStore.core_Attachment>/monthly_2018_11/occaecatcupidatat.jpg.b5f52a194630418caa8ce3a71c2110b7.jpg" class="ipsAttachLink ipsAttachLink_image"><img data-fileid="1890" src="<fileStore.core_Attachment>/monthly_2018_11/occaecatcupidatat.thumb.jpg.cfc0eea1f500536dd41befe90b682768.jpg" class="ipsImage ipsImage_thumbnailed" alt="occaecatcupidatat.jpg"></a></p>
+
+<p>Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.</p>
+```
+
+IPB PHP replaces `<fileStore.core_Attachment>` with `https://forum.enhancedathlete.com/uploads`.
+
+The `uploads` path seems to be stored in the `core_file_storage` table:
+
+| id | method     | configuration                             |
+|----|---|---|
+|  1 | FileSystem | {"dir":"{root}\/uploads","url":"uploads"} |
+
+```
+select configuration from `core_file_storage` where `method` = "FileSystem"
+```
+
+```
+{
+	"dir": "{root}\/uploads",
+	"url": "uploads"
+}
+```
+
+Determining a practical source for the files has been problematic. The options are to use FTP or HTTP paths but I couldn't programmatically find either.
+
+In IPB PHP `{root}` defaults to `ROOT_PATH` which defaults to `__DIR__`.
+
+A `site_address` setting exists but in our case it was null:
+```
+SELECT `conf_value` FROM ipbforum.core_sys_conf_settings WHERE `conf_key` = 'site_address';
+``` 
+I don't see where it is set in the UI and when I changed it in MySQL I didn't see that reflected anywhere.
+
+The URL is set in `/conf_global.php` as `$INFO['base_url']` but we only have a database connection.
+
+If we had FTP credentials, `theme_disk_cache_path` returns `/var/www/ipbforum/uploads` but I don't know if this would be consistently correct.
+```
+SELECT `conf_value` FROM ipbforum.core_sys_conf_settings WHERE `conf_key` = 'theme_disk_cache_path';
+``` 
+
+The converter/importer UI doesn't ask for the site's address.
+
+Once a source is figured out, the `import_infusion_media()` method copies the files locally under `wp-content/uploads`, using a regex to pull the correct date folder to use from the IPB filepath.
+
+I did not import the files into the WordPress Media Library.
 
 ### V3 FAQ & Known Issues
 

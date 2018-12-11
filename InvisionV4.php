@@ -631,10 +631,58 @@ class InvisionV4 extends BBP_Converter_Base {
 		$invision_markup = preg_replace( '/\:rolleyes\:/', ':roll:',    $invision_markup );
 		$invision_markup = preg_replace( '/\:unsure\:/',   ':???:',     $invision_markup );
 
+		$invision_markup = $this->import_infusion_media( $invision_markup );
+
 		// Now that Invision custom HTML has been stripped put the cleaned HTML back in $field
 		$field = $invision_markup;
 
 		// Parse out any bbCodes in $field with the BBCode 'parser.php'
 		return parent::callback_html( $field );
+
+	}
+
+	public function import_infusion_media( $invision_markup ) {
+
+		// TODO: To import media:
+		// TODO: 1. Set this to the URL of the source server uploads path
+		$ipb_uploads_url = untrailingslashit('https://forum.enhancedathlete.com/uploads');
+
+		// TODO: 2. Delete this line
+		return $invision_markup;
+
+		$files_found = array();
+
+		if( false != preg_match_all('/<fileStore.core_Attachment>(.*?)"/', $invision_markup, $files_found) ) {
+
+			foreach($files_found[1] as $index => $file_path) {
+
+				$remote_file_url = $ipb_uploads_url . $file_path;
+
+				$year_month_filename = array();
+
+				if( false != preg_match('/monthly_(\d{4})_(\d{2})\/(.*)/', $file_path, $year_month_filename ) ) {
+
+					$year = $year_month_filename[1];
+					$month = $year_month_filename[2];
+					$filename = $year_month_filename[3];
+
+					$upload_dir = wp_upload_dir($year . '/' . $month );
+
+					$local_file_destination_path = $upload_dir['path'] . '/' . $filename;
+
+					copy( $remote_file_url, $local_file_destination_path );
+
+					$local_file_url = $upload_dir['url'] . '/' . $filename;
+
+					$string_to_replace = $files_found[0][$index];
+
+					$invision_markup = str_replace( $string_to_replace, $local_file_url . '"', $invision_markup );
+
+				}
+			}
+		}
+
+		return $invision_markup;
+
 	}
 }
