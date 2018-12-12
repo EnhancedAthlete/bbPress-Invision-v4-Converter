@@ -140,6 +140,20 @@ smtp_user
 
 site_address - null
 
+### Emoticons
+
+It seems the parent class `callback_html()` function was replacing bbcodes inside `alt=""` and `title=""` tags and not correctly replacing the image's url.
+
+```
+<img alt="&gt;:(" data-emoticon="" height="20" src="<fileStore.core_Emoticons>/emoticons/angry.png" srcset="<fileStore.core_Emoticons>/emoticons/angry@2x.png 2x" title="&gt;:(" width="20" />
+```
+
+``` 
+<img alt="&lt;img src=" width="" height="" />:(" title="&gt;:(" class="bbcode_smiley" /&gt;" data-emoticon="" height="20" src="/emoticons/angry.png" srcset="/emoticons/angry@2x.png 2x" title="<img class="bbcode_smiley" title="&gt;:(" src="/angry.gif" alt="&gt;:(" width="" height="" />" width="20" /&gt;
+```
+
+This converter now copies over the original emoticon to `wp-content/uploads/emoticons/`, replaces the url in the post content, and removes the troublesome tags so the parent class doesn't mess them up.
+
 ### More Settings
 
 // Registration Terms & Rules

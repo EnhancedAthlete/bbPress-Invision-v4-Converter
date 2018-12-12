@@ -723,6 +723,8 @@ class InvisionV4 extends BBP_Converter_Base {
 		$invision_markup = preg_replace( '/\:rolleyes\:/', ':roll:',    $invision_markup );
 		$invision_markup = preg_replace( '/\:unsure\:/',   ':???:',     $invision_markup );
 
+		$invision_markup = $this->invision_emoticons( $invision_markup );
+
 		$invision_markup = $this->import_infusion_media( $invision_markup );
 
 		// Now that Invision custom HTML has been stripped put the cleaned HTML back in $field
@@ -730,7 +732,51 @@ class InvisionV4 extends BBP_Converter_Base {
 
 		// Parse out any bbCodes in $field with the BBCode 'parser.php'
 		return parent::callback_html( $field );
+	}
 
+	/**
+	 * I think $bbcode->Parse( $field ) was parsing bbCode in alt="&gt;:(" and title="&gt;:(" and replacing them
+	 * with image tags.
+	 *
+	 * This function copies IPB emoticons to WordPress, replaces the URLs in the post, and removes the alt and title tags
+	 *
+	 * @param string $invision_markup
+	 *
+	 * @return string
+	 */
+	private function invision_emoticons( $invision_markup ) {
+
+		// <img (alt=".*?").*?src="(<fileStore.core_Emoticons>.*?)" srcset="(<fileStore.core_Emoticons>.*?)" (title=".*?")
+
+		$output_array = array();
+
+		if( false != preg_match_all('/<img (alt=".*?").*?src="<fileStore.core_Emoticons>\/emoticons\/(.*?)" srcset="<fileStore.core_Emoticons>\/emoticons\/(.*?) 2x" (title=".*?")/', $invision_markup, $output_array) ) {
+
+			$upload_dir = wp_upload_dir();
+
+			$invision_markup = preg_replace('/alt=".*?"/', '', $invision_markup );
+			$invision_markup = preg_replace('/title=".*?"/', '', $invision_markup );
+
+			// $output_array[2] // angry.png
+			$local_file = $upload_dir['basedir'] . '/ipb_emoticons/' . $output_array[2][0];
+			if( !file_exists( $local_file ) ) {
+
+				copy( $ipb_uploads_url . '/emoticons/' . $output_array[2][0], $local_file );
+			}
+			$invision_markup = str_replace( '<fileStore.core_Emoticons>/emoticons/' . $output_array[2][0], $upload_dir['baseurl'] . '/ipb_emoticons/' . $output_array[2][0], $invision_markup );
+
+
+			$local_file = $upload_dir['basedir'] . '/ipb_emoticons/' . $output_array[3][0];
+			if( !file_exists( $local_file ) ) {
+
+				copy( $ipb_uploads_url . '/emoticons/' . $output_array[3][0], $local_file );
+			}
+
+			$invision_markup = str_replace( '<fileStore.core_Emoticons>/emoticons/' . $output_array[3][0], $upload_dir['baseurl'] . '/ipb_emoticons/' . $output_array[3][0], $invision_markup );
+
+		}
+
+		return $invision_markup;
 	}
 
 	public function import_infusion_media( $invision_markup ) {
