@@ -30,6 +30,8 @@ class InvisionV4 extends BBP_Converter_Base {
 	public function __construct() {
 		parent::__construct();
 
+		$this->ipb_uploads_url = 'https://forum.enhancedathlete.com/uploads';
+
 		$this->rest_server = rest_get_server();
 
 		$this->redirection_init();
@@ -80,30 +82,9 @@ class InvisionV4 extends BBP_Converter_Base {
 					}
 				}
 			}
+
+			add_action( "added_post_meta", array( $this, 'add_404_redirect'), 20, 4 );
 		}
-	}
-
-	private function create_redirect( $from, $to_post_id ) {
-
-		if( null == $this->redirection_group_id ) {
-			return;
-		}
-
-		$request = new WP_REST_Request( 'POST', '/redirection/v1/redirect' );
-		$request->set_query_params(
-			array(
-				'url'         => $from,
-				'action_data' => array (
-					'url' => "?p=$to_post_id"
-				),
-				'action_type' => 'url',
-				'group_id'    => $this->redirection_group_id,
-				'action_code' => 301,
-				'match_type'  => 'url'
-			)
-		);
-
-		rest_do_request( $request );
 	}
 
 	/**
@@ -252,6 +233,14 @@ class InvisionV4 extends BBP_Converter_Base {
 			'default' => date('Y-m-d H:i:s')
 		);
 
+		// Store the forum url fragment for creating a redirect link later
+		$this->field_map[] = array(
+			'from_tablename'  => 'forums_forums',
+			'from_fieldname'  => 'name_seo',
+			'to_type'         => 'forum',
+			'to_fieldname'    => '_ipb_forum_name_seo'
+		);
+
 		/** Topic Section *****************************************************/
 
 		// Old topic id (Stored in postmeta)
@@ -373,6 +362,14 @@ class InvisionV4 extends BBP_Converter_Base {
 			'to_type'        => 'topic',
 			'to_fieldname'   => '_bbp_last_active_time',
 			'callback_method' => 'callback_datetime'
+		);
+
+		// Store the title URL fragment for later creating the 404 redirect
+		$this->field_map[] = array(
+			'from_tablename'  => 'forums_topics',
+			'from_fieldname'  => 'title_seo',
+			'to_type'         => 'topic',
+			'to_fieldname'    => '_ipb_topic_title_seo'
 		);
 
 		/** Tags Section ******************************************************/
@@ -629,6 +626,17 @@ class InvisionV4 extends BBP_Converter_Base {
 		return array( 'hash' => $field, 'salt' => $row['members_pass_salt'] );
 	}
 
+
+	/**
+	 * Sets up 404 redirects from the old forum URLS to the bbPress URLs
+	 *
+	 * @param $field
+	 */
+	public function callback_404( $field ) {
+
+	}
+
+
 	/**
 	 * This method is to take the pass out of the database and compare
 	 * to a pass the user has typed in.
@@ -767,5 +775,73 @@ class InvisionV4 extends BBP_Converter_Base {
 
 		return $invision_markup;
 
+	}
+
+	/***
+	 * Builds and saves URLs for 404 redirects.
+	 *
+	 * This is called everytime post meta is added.
+	 *
+	 * @param int    $mid        The meta ID after successful update.
+	 * @param int    $post_ID  Object ID.
+	 * @param string $meta_key   Meta key.
+	 * @param mixed  $meta_value Meta value.
+	 */
+	public function add_404_redirect( $mid, $post_ID, $meta_key, $_meta_value ) {
+
+		$old_seo_meta_key = array(
+			'forum' => '_ipb_forum_name_seo',
+			'topic' => '_ipb_topic_title_seo'
+		);
+
+		if( $meta_key != $old_seo_meta_key['forum'] && $meta_key != $old_seo_meta_key['topic'] ) {
+			return;
+		}
+
+		$post = get_post( $post_ID );
+
+		$old_id_meta_key = array(
+			'forum' => '_bbp_old_forum_id',
+			'topic' => '_bbp_old_topic_id'
+		);
+
+		$old_id = get_post_meta( $post_ID, $old_id_meta_key[$post->post_type], true );
+
+		if( false === $old_id ) {
+			error_log( 'no id in meta before ' . $meta_key . '. see add_404_redirect() in InvisionV4.php' );
+			return;
+		}
+
+		$old_url = "/$post->post_type/$old_id-$_meta_value";
+
+		// Can't test if it is a valid URL on private forums.
+
+		$this->create_redirect( $old_url, $post_ID );
+
+		delete_post_meta( $post_ID, $meta_key );
+	}
+
+	private function create_redirect( $from, $to_post_id ) {
+
+		// This should never happen since the calling method is added by an action set inside a check for the plugin.s
+		if( null == $this->redirection_group_id ) {
+			return;
+		}
+
+		$request = new WP_REST_Request( 'POST', '/redirection/v1/redirect' );
+		$request->set_query_params(
+			array(
+				'url'         => $from,
+				'action_data' => array (
+					'url' => "?p=$to_post_id"
+				),
+				'action_type' => 'url',
+				'group_id'    => $this->redirection_group_id,
+				'action_code' => 301,
+				'match_type'  => 'url'
+			)
+		);
+
+		rest_do_request( $request );
 	}
 }

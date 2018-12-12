@@ -154,25 +154,9 @@ Status updates (`core_member_status_updates`) & replies (`core_member_status_rep
 
 ## 404 Redirection
 
-The [WordPress Redirection plugin](https://wordpress.org/plugins/redirection/) should be used to ensure no 404s exist after the import.
+If the [WordPress Redirection plugin](https://wordpress.org/plugins/redirection/) is installed, this converter will add 404 redirects from old forum and topic URLs to the new bbPress posts.
 
-e.g. `https://invisionforum.domain.com/forum/6-supplementation/`
-
-which seems to be a concatentation of
-`"/forum/"` . `forums_forums.id` . `"-"` . `forums_forums.name_seo`
-
-and should redirect to `?p=12345` as HTTP 301 moved permenantly.
-
-This seesm to be calculated based on settings in ipb / system / advanced configuration / friendly urls 
-AND
-Seach Engine Optimization / Friendly URLs
-
-`"/topic/"` . `_bbp_old_topic_id` . `"-"` . `forums_topics.title_seo`
-
-
-Maybe save it as post-meta anyway for users that don't have the plugin installed.
-
-
+It does this by saving the `forums_forums.name_seo` and `forums_topics.title_seo` into WordPress post meta, and having an action on their save to use that data to build the old url, e.g. `/forum/6-forum-seo-name/`, and uses the Redirection REST API internally to add the entry pointing to `/?p=123`, so permalinks can be changed later, to a group named `bbPress`, then deletes the new meta key.
 
 ## Acknowledgements
 
