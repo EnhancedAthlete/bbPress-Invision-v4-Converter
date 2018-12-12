@@ -16,6 +16,8 @@
  */
 class InvisionV4 extends BBP_Converter_Base {
 
+	private $ipb_uploads_url;
+
 	/**
 	 * Main Constructor
 	 *
@@ -643,12 +645,11 @@ class InvisionV4 extends BBP_Converter_Base {
 
 	public function import_infusion_media( $invision_markup ) {
 
-		// TODO: To import media:
-		// TODO: 1. Set this to the URL of the source server uploads path
-		$ipb_uploads_url = untrailingslashit('https://forum.enhancedathlete.com/uploads');
+		if( null == $this->ipb_uploads_url ) {
+			return $invision_markup;
+		}
 
-		// TODO: 2. Delete this line
-		return $invision_markup;
+		$ipb_uploads_url = untrailingslashit( $this->ipb_uploads_url );
 
 		$files_found = array();
 
