@@ -16,7 +16,12 @@
  */
 class InvisionV4 extends BBP_Converter_Base {
 
+	private $rest_server;
+
 	private $ipb_uploads_url;
+
+	private $redirection_group_name = 'bbPress';
+	private $redirection_group_id = null;
 
 	/**
 	 * Main Constructor
@@ -24,6 +29,81 @@ class InvisionV4 extends BBP_Converter_Base {
 	 */
 	public function __construct() {
 		parent::__construct();
+
+		$this->rest_server = rest_get_server();
+
+		$this->redirection_init();
+	}
+
+	/**
+	 * The WordPress Redirection plugin can be used to avoid 404 links for users
+	 *
+	 * Check is the plugin active.
+	 * Retrieve the group id or create it if absent.
+	 *
+	 * @see https://wordpress.org/plugins/redirection/
+	 */
+	private function redirection_init() {
+
+		if( class_exists( 'Redirection_Api' ) ) {
+
+			$request = new WP_REST_Request( 'GET', '/redirection/v1/group' );
+
+			$response = rest_do_request( $request );
+			$data = $this->rest_server->response_to_data( $response, false );
+
+			$redirection_group_exists = false;
+
+			foreach( $data['items'] as $item ) {
+				if( $item['name'] === $this->redirection_group_name ) {
+					$this->redirection_group_id = $item['id'];
+					$redirection_group_exists = true;
+					break;
+				}
+			}
+
+			if( !$redirection_group_exists ) {
+
+				$request = new WP_REST_Request( 'POST', '/redirection/v1/group' );
+				$request->set_query_params( array(
+					'name' => $this->redirection_group_name,
+					'moduleId' => WordPress_Module::MODULE_ID
+					)
+				);
+
+				$response = rest_do_request( $request );
+				$data = $this->rest_server->response_to_data( $response, false );
+
+				foreach( $data['items'] as $item ) {
+					if( $item['id'] === $this->redirection_group_name ) {
+						$this->redirection_group_id = $item['id'];
+					}
+				}
+			}
+		}
+	}
+
+	private function create_redirect( $from, $to_post_id ) {
+
+		if( null == $this->redirection_group_id ) {
+			return;
+		}
+
+		$request = new WP_REST_Request( 'POST', '/redirection/v1/redirect' );
+		$request->set_query_params(
+			array(
+				'url'         => $from,
+				'action_data' => array (
+					'url' => "?p=$to_post_id"
+				),
+				'action_type' => 'url',
+				'group_id'    => $this->redirection_group_id,
+				'action_code' => 301,
+				'match_type'  => 'url'
+			)
+		);
+
+		rest_do_request( $request );
 	}
 
 	/**

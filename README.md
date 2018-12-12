@@ -153,49 +153,19 @@ The [WordPress Redirection plugin](https://wordpress.org/plugins/redirection/) s
 e.g. `https://invisionforum.domain.com/forum/6-supplementation/`
 
 which seems to be a concatentation of
-`"/forum/"``forums_forums.id``"-"``forums.forums.name_seo`
+`"/forum/"` . `forums_forums.id` . `"-"` . `forums_forums.name_seo`
 
-and should redirect to ?p=12345 as HTTP 301 moved permenantly.
+and should redirect to `?p=12345` as HTTP 301 moved permenantly.
 
 This seesm to be calculated based on settings in ipb / system / advanced configuration / friendly urls 
 AND
 Seach Engine Optimization / Friendly URLs
 
+`"/topic/"` . `_bbp_old_topic_id` . `"-"` . `forums_topics.title_seo`
+
 
 Maybe save it as post-meta anyway for users that don't have the plugin installed.
 
-
-```
-// Create a redirection group for the forums "Invision"
-$invision_group_name = 'Invision';
-
-$groups = Red_Group::get_all();
-$invision_group = null;
-foreach( $groups as $group ) {
-	if($invision_group_name == $group['name']) {
-		$invision_group = $group;
-		break;
-	}
-}
-
-if( null == $invision_group ) {
-	$group_module_id = WordPress_Module.MODULE_ID;
-	$invision_group = Red_Group::create( $invision_group_name, $group_module_id );
-}
-
-$details['url'] = 'old url';
-$details['action_data'] = 'new url';
-$details['action_code'] = 301
-$details['action_type'] = 'url'; // the actual string "url"
-$details['match_type'] = 'url'; // the actual string "url"
-
-$details['group_id'] = $invision_group['id'];
-
-$new_redirect = Red_Item::create( $details );
-
-if ( is_wp_error( $data ) ) {
-}
-```
 
 
 ## Acknowledgements
