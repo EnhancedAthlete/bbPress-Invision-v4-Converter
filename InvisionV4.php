@@ -567,6 +567,8 @@ class InvisionV4 extends BBP_Converter_Base {
 	/**
 	 * This method allows us to indicates what is or is not converted for each
 	 * converter.
+	 *
+	 * Doesn't seem to be in use in any of the included converters
 	 */
 	public function info() {
 		return '';

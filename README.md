@@ -10,6 +10,8 @@ Tested from Invision Community 4.3.6 to [bbPress 2.6-rc-6](https://bbpress.org/d
 2. Drop `InvisionV4.php` into `wp-content/plugins/bbpress/includes/admin/converters/`
 3. Navigate to WordPress Admin Dashboard / Tools / Forums / Import Forums at `/wp-admin/tools.php?page=bbp-converter`
 4. Fill in the source database details and hit `Start`
+5. Manually set your forum titles and descriptions
+6. Run Tools/Repair Forums : Recalculate last activity in each topic and forum.
 
 ## TODO
 
@@ -33,7 +35,7 @@ HTML then needs to be stripped from this value.
 
 ### Post Voices / Forum Last Post
 
-* The voices count (per thread) isn't set after posts are imported
+* The voices count (unique users per thread) isn't set after posts are imported
 * Forum Last Posts all appear as "No Topics"
 
 Both these are fixed by running Tools / Repair Forums : Recalculate last activity in each topic and forum.
@@ -118,12 +120,15 @@ Announcements act as special pinned posts that appear above the list of forums. 
 
 for the first three posts everyone sees
 
+### Forum Dates
+
+This currenly uses today's date for the forum creation date. It could maybe be assumed from the oldest post in the forum.
 
 ### Core Settings
 
 ```SELECT * FROM ipbforum.core_sys_conf_settings WHERE conf_key = 'board_name';```
 
-Probably best not to overwrite the WordPress site title.
+Probably best not to overwrite the WordPress site title. ...unless it's unchanged from the default WordPress install title (~"another wordpress site")
 
 'board_name' - WordPress site title
 
@@ -139,6 +144,7 @@ site_address - null
 
 // Registration Terms & Rules
 
+// Followed threads
 
 ## BuddyPress
 
@@ -170,4 +176,4 @@ Maybe save it as post-meta anyway for users that don't have the plugin installed
 
 ## Acknowledgements
 
-Built for [Enhanced Athlete](https://www.enhancedathlete.com) by [Brian Henry](http://github.com/brianhenryie/), thanks to the contributors of the [Invision v3 converter](https://bbpress.trac.wordpress.org/log/trunk/src/includes/admin/converters/Invision.php).
+Built for [Enhanced Athlete](https://www.enhancedathlete.com) by [Brian Henry](http://github.com/BrianHenryIE/), thanks to the contributors of the [Invision v3 converter](https://bbpress.trac.wordpress.org/log/trunk/src/includes/admin/converters/Invision.php).
