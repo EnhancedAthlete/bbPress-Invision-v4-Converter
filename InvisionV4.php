@@ -38,6 +38,8 @@ class InvisionV4 extends BBP_Converter_Base {
 
 		$this->redirection_init();
 		$this->wp_user_avatar_init();
+
+		add_action( "added_user_meta", array( $this, 'set_user_role'), 20, 4 );
 	}
 
 	/**
@@ -596,6 +598,14 @@ class InvisionV4 extends BBP_Converter_Base {
 			'to_type'         => 'user',
 			'to_fieldname'    => '_ipb_user_photo'
 		);
+
+		// User group / role.
+		$this->field_map[] = array(
+			'from_tablename'  => 'core_members',
+			'from_fieldname'  => 'member_group_id',
+			'to_type'         => 'user',
+			'to_fieldname'    => '_ipb_user_group'
+		);
 	}
 
 	/**
@@ -1034,6 +1044,49 @@ class InvisionV4 extends BBP_Converter_Base {
 
 				return $img_id;
 			}
+		}
+	}
+
+	/***
+	 * Once the _ipb_user_group user meta key is set, this function uses its value to set the appropriate bbPress
+	 * role for that user.
+	 *
+	 * @param int    $mid        The meta ID after successful update.
+	 * @param int    $user_id  Object ID.
+	 * @param string $meta_key   Meta key.
+	 * @param mixed  $meta_value Meta value.
+	 */
+	public function set_user_role( $mid, $user_id, $meta_key, $_meta_value ) {
+
+		$user_group_meta_key = '_ipb_user_group';
+
+		if( $meta_key != $user_group_meta_key ) {
+			return;
+		}
+
+		if( $_meta_value != 3) {
+			error_log( 'setting role ' . $_meta_value . ' for user ' . $user_id );
+		}
+		delete_user_meta( $user_id, $meta_key, $_meta_value );
+
+		// 3: IPB Members => bbPress Participant
+		if( 3 == $_meta_value ) {
+			return;
+		}
+
+		// 2: IPB Guests => bbPress Spectators
+		if( 2 == $_meta_value ) {
+			bbp_set_user_role( $user_id, 'bbp_spectator' );
+		}
+
+		// 4: IPB administrators => bbPress Keymasters
+		if( 4 == $_meta_value ) {
+			bbp_set_user_role( $user_id, 'bbp_keymaster' );
+		}
+
+		// 6: IPB moderators => bbPress Moderators
+		if( 6 == $_meta_value ) {
+			bbp_set_user_role( $user_id, 'bbp_moderator' );
 		}
 	}
 }
