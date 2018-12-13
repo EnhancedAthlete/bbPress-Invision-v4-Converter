@@ -584,7 +584,7 @@ class InvisionV4 extends BBP_Converter_Base {
 			'to_fieldname'   => 'display_name'
 		);
 
-		// User avatar.
+		// User avatar thumbnail.
 		$this->field_map[] = array(
 			'from_tablename'  => 'core_members',
 			'from_fieldname'  => 'pp_thumb_photo',
@@ -592,6 +592,7 @@ class InvisionV4 extends BBP_Converter_Base {
 			'to_fieldname'    => '_ipb_user_thumb_photo'
 		);
 
+		// User avatar.
 		$this->field_map[] = array(
 			'from_tablename'  => 'core_members',
 			'from_fieldname'  => 'pp_main_photo',
@@ -961,7 +962,7 @@ class InvisionV4 extends BBP_Converter_Base {
 
 		$avatar_thumb = get_user_meta( $user_id, $old_avatar_thumb_meta_key, true );
 
-		delete_user_meta( $user_id, $old_avatar_meta_key );
+		delete_user_meta( $user_id, $old_avatar_thumb_meta_key );
 
 		// The thumbnail should be fetched and stored first
 		// Thumbnails only exist for user uploaded photos
