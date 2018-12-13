@@ -140,6 +140,10 @@ smtp_user
 
 site_address - null
 
+### User Profile Pictures
+
+If [WP User Avatar](https://wordpress.org/plugins/wp-user-avatar/) plugin is active on the site, the user's avatar will be added to the WordPress Media Library and used as their avatar.
+
 ### Emoticons
 
 It seems the parent class `callback_html()` function was replacing bbcodes inside `alt=""` and `title=""` tags and not correctly replacing the image's url.

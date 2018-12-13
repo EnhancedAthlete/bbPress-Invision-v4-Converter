@@ -23,6 +23,8 @@ class InvisionV4 extends BBP_Converter_Base {
 	private $redirection_group_name = 'bbPress';
 	private $redirection_group_id = null;
 
+	private $wp_user_avatar_user_meta_key = null;
+
 	/**
 	 * Main Constructor
 	 *
@@ -35,6 +37,7 @@ class InvisionV4 extends BBP_Converter_Base {
 		$this->rest_server = rest_get_server();
 
 		$this->redirection_init();
+		$this->wp_user_avatar_init();
 	}
 
 	/**
@@ -47,44 +50,63 @@ class InvisionV4 extends BBP_Converter_Base {
 	 */
 	private function redirection_init() {
 
-		if( class_exists( 'Redirection_Api' ) ) {
+		if( !class_exists( 'Redirection_Api' ) ) {
+			return;
+		}
 
-			$request = new WP_REST_Request( 'GET', '/redirection/v1/group' );
+		$request = new WP_REST_Request( 'GET', '/redirection/v1/group' );
+
+		$response = rest_do_request( $request );
+		$data = $this->rest_server->response_to_data( $response, false );
+
+		$redirection_group_exists = false;
+
+		foreach( $data['items'] as $item ) {
+			if( $item['name'] === $this->redirection_group_name ) {
+				$this->redirection_group_id = $item['id'];
+				$redirection_group_exists = true;
+				break;
+			}
+		}
+
+		if( !$redirection_group_exists ) {
+
+			$request = new WP_REST_Request( 'POST', '/redirection/v1/group' );
+			$request->set_query_params( array(
+				'name' => $this->redirection_group_name,
+				'moduleId' => WordPress_Module::MODULE_ID
+				)
+			);
 
 			$response = rest_do_request( $request );
 			$data = $this->rest_server->response_to_data( $response, false );
 
-			$redirection_group_exists = false;
-
 			foreach( $data['items'] as $item ) {
-				if( $item['name'] === $this->redirection_group_name ) {
+				if( $item['id'] === $this->redirection_group_name ) {
 					$this->redirection_group_id = $item['id'];
-					$redirection_group_exists = true;
-					break;
 				}
 			}
-
-			if( !$redirection_group_exists ) {
-
-				$request = new WP_REST_Request( 'POST', '/redirection/v1/group' );
-				$request->set_query_params( array(
-					'name' => $this->redirection_group_name,
-					'moduleId' => WordPress_Module::MODULE_ID
-					)
-				);
-
-				$response = rest_do_request( $request );
-				$data = $this->rest_server->response_to_data( $response, false );
-
-				foreach( $data['items'] as $item ) {
-					if( $item['id'] === $this->redirection_group_name ) {
-						$this->redirection_group_id = $item['id'];
-					}
-				}
-			}
-
-			add_action( "added_post_meta", array( $this, 'add_404_redirect'), 20, 4 );
 		}
+
+		add_action( "added_post_meta", array( $this, 'add_404_redirect'), 20, 4 );
+
+	}
+
+	public function wp_user_avatar_init() {
+
+		if( !class_exists( 'WP_User_Avatar_Setup' ) ) {
+			return;
+		}
+
+		/** @var int $wpdb */
+		global $blog_id;
+
+		/** @var wpdb $wpdb */
+		global $wpdb;
+
+		$this->wp_user_avatar_user_meta_key = $wpdb->get_blog_prefix( $blog_id ) . 'user_avatar';
+
+		add_action( "added_user_meta", array( $this, 'add_wp_user_avatar'), 20, 4 );
 	}
 
 	/**
@@ -559,6 +581,21 @@ class InvisionV4 extends BBP_Converter_Base {
 			'to_type'        => 'user',
 			'to_fieldname'   => 'display_name'
 		);
+
+		// User avatar.
+		$this->field_map[] = array(
+			'from_tablename'  => 'core_members',
+			'from_fieldname'  => 'pp_thumb_photo',
+			'to_type'         => 'user',
+			'to_fieldname'    => '_ipb_user_thumb_photo'
+		);
+
+		$this->field_map[] = array(
+			'from_tablename'  => 'core_members',
+			'from_fieldname'  => 'pp_main_photo',
+			'to_type'         => 'user',
+			'to_fieldname'    => '_ipb_user_photo'
+		);
 	}
 
 	/**
@@ -752,7 +789,9 @@ class InvisionV4 extends BBP_Converter_Base {
 
 		if( false != preg_match_all('/<img (alt=".*?").*?src="<fileStore.core_Emoticons>\/emoticons\/(.*?)" srcset="<fileStore.core_Emoticons>\/emoticons\/(.*?) 2x" (title=".*?")/', $invision_markup, $output_array) ) {
 
+			$ipb_uploads_url = untrailingslashit( $this->ipb_uploads_url );
 			$upload_dir = wp_upload_dir();
+			wp_mkdir_p($upload_dir['basedir'] . '/ipb_emoticons/');
 
 			$invision_markup = preg_replace('/alt=".*?"/', '', $invision_markup );
 			$invision_markup = preg_replace('/title=".*?"/', '', $invision_markup );
@@ -854,7 +893,6 @@ class InvisionV4 extends BBP_Converter_Base {
 		$old_id = get_post_meta( $post_ID, $old_id_meta_key[$post->post_type], true );
 
 		if( false === $old_id ) {
-			error_log( 'no id in meta before ' . $meta_key . '. see add_404_redirect() in InvisionV4.php' );
 			return;
 		}
 
@@ -889,5 +927,113 @@ class InvisionV4 extends BBP_Converter_Base {
 		);
 
 		rest_do_request( $request );
+	}
+
+	/***
+	 *
+	 *
+	 * This is called everytime user meta is added.
+	 *
+	 * @param int    $mid        The meta ID after successful update.
+	 * @param int    $user_id  Object ID.
+	 * @param string $meta_key   Meta key.
+	 * @param mixed  $meta_value Meta value.
+	 */
+	public function add_wp_user_avatar( $mid, $user_id, $meta_key, $_meta_value ) {
+
+		$old_avatar_meta_key = '_ipb_user_photo';
+
+		if( $meta_key != $old_avatar_meta_key ) {
+			return;
+		}
+
+		$old_avatar_thumb_meta_key = '_ipb_user_thumb_photo';
+
+		$avatar_thumb = get_user_meta( $user_id, $old_avatar_thumb_meta_key, true );
+
+		delete_user_meta( $user_id, $old_avatar_meta_key );
+
+		// The thumbnail should be fetched and stored first
+		// Thumbnails only exist for user uploaded photos
+		if( empty( $avatar_thumb ) ) {
+			return;
+		}
+
+		$ipb_uploads_url = trailingslashit( $this->ipb_uploads_url );
+
+		$url = $ipb_uploads_url . $_meta_value;
+
+		$attachment_id = $this->image_upload( $url );
+
+		update_user_meta($user_id, $this->wp_user_avatar_user_meta_key, $attachment_id);
+
+		delete_user_meta( $user_id, $old_avatar_meta_key );
+	}
+
+
+	/**
+	 * @param $url
+	 *
+	 * @return int|WP_Error attachment id
+	 */
+	function image_upload( $url ) {
+
+		// Gives us access to the download_url() and wp_handle_sideload() functions
+		require_once( ABSPATH . 'wp-admin/includes/file.php' );
+
+		// Download file to temp dir
+		$timeout_seconds = 10;
+		$temp_file = download_url( $url, $timeout_seconds );
+
+		if ( !is_wp_error( $temp_file ) ) {
+
+			$info = new SplFileInfo($url);
+
+			// Array based on $_FILE as seen in PHP file uploads
+			$file = array(
+				'name'     => basename($url), // ex: wp-header-logo.png
+				'type'     => 'image/' . $info->getExtension(),
+				'tmp_name' => $temp_file,
+				'error'    => 0,
+				'size'     => filesize($temp_file),
+			);
+
+			$overrides = array(
+				// Tells WordPress to not look for the POST form
+				// fields that would normally be present as
+				// we downloaded the file from a remote server, so there
+				// will be no form fields
+				// Default is true
+				'test_form' => false,
+
+				// Setting this to false lets WordPress allow empty files, not recommended
+				// Default is true
+				'test_size' => true,
+			);
+
+			// Move the temporary file into the uploads directory
+			$results = wp_handle_sideload( $file, $overrides );
+
+			if ( !empty( $results['error'] ) ) {
+				// Insert any error handling here
+			} else {
+
+				$filename  = $results['file']; // Full path to the file
+				$local_url = $results['url'];  // URL to the file in the uploads dir
+				$type = $results['type']; // MIME type of the file
+				$wp_upload_dir = wp_upload_dir(); // Get the path to the upload directory.
+
+				$attachment = array (
+					'post_title' => preg_replace( '/\.[^.]+$/', '', basename( $filename ) ),
+					'post_mime_type' => $type,
+					'post_status' => 'inherit',
+					'post_content' => '',
+				);
+
+				$img_id = wp_insert_attachment( $attachment, $filename  );
+
+				return $img_id;
+			}
+		}
 	}
 }
