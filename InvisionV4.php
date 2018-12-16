@@ -18,6 +18,8 @@ class InvisionV4 extends BBP_Converter_Base {
 
 	private $rest_server;
 
+	private $forums_relative_url;
+
 	private $ipb_uploads_url;
 
 	private $redirection_group_name = 'bbPress';
@@ -31,6 +33,15 @@ class InvisionV4 extends BBP_Converter_Base {
 	 */
 	public function __construct() {
 		parent::__construct();
+
+		$wordpress_install_url = get_option('home');
+		$wordpress_install_url = trailingslashit($wordpress_install_url);
+
+		$forums_root = get_option( '_bbp_root_slug');
+		$forums_url = $wordpress_install_url . $forums_root;
+
+		$url = wp_parse_url($forums_url);
+		$this->forums_relative_url = trailingslashit( $url['path'] );
 
 		$this->ipb_uploads_url = 'https://forum.enhancedathlete.com/uploads';
 
@@ -771,6 +782,8 @@ class InvisionV4 extends BBP_Converter_Base {
 		$invision_markup = preg_replace( '/\:rolleyes\:/', ':roll:',    $invision_markup );
 		$invision_markup = preg_replace( '/\:unsure\:/',   ':???:',     $invision_markup );
 
+		$invision_markup = $this->invision_member_links( $invision_markup );
+
 		$invision_markup = $this->invision_emoticons( $invision_markup );
 
 		$invision_markup = $this->import_infusion_media( $invision_markup );
@@ -780,6 +793,39 @@ class InvisionV4 extends BBP_Converter_Base {
 
 		// Parse out any bbCodes in $field with the BBCode 'parser.php'
 		return parent::callback_html( $field );
+	}
+
+
+	/**
+	 * Replaces links to IPB profiles with bbPress profile links
+	 *
+	 * Uses the IPB username rather than calculating the WordPress username from IPB user id.
+	 *
+	 * href="<___base_url___>/profile/5299-banhammer/"
+	 * /forums/users/banhammer
+	 *
+	 * @param $invision_markup
+	 *
+	 * @return string
+	 */
+	private function invision_member_links( $invision_markup ) {
+
+		$output_array = array();
+
+		if( false != preg_match_all('/<a.*?href="<___base_url___>\/profile\/\d+-(.*?)\/".*?>/', $invision_markup, $output_array) ) {
+
+			foreach( $output_array[0] as $index => $anchor ) {
+
+				$bbpress_user_url = $this->forums_relative_url . 'users/' . $output_array[1][$index];
+
+				$bbpress_user_anchor = '<a href="' . $bbpress_user_url . '">';
+
+				$invision_markup = str_replace( $anchor, $bbpress_user_anchor, $invision_markup );
+
+			}
+		}
+
+		return $invision_markup;
 	}
 
 	/**
