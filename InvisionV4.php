@@ -685,17 +685,6 @@ class InvisionV4 extends BBP_Converter_Base {
 		return array( 'hash' => $field, 'salt' => $row['members_pass_salt'] );
 	}
 
-
-	/**
-	 * Sets up 404 redirects from the old forum URLS to the bbPress URLs
-	 *
-	 * @param $field
-	 */
-	public function callback_404( $field ) {
-
-	}
-
-
 	/**
 	 * This method is to take the pass out of the database and compare
 	 * to a pass the user has typed in.
