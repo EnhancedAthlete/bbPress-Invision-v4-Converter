@@ -1,18 +1,22 @@
 # bbPress Invision v4 Converter
 
-A (*work-in-progress*) converter to migrate from [Invision Community (Power Board) v4](https://invisioncommunity.com/) to [bbPress](https://bbpress.org/) (forums software for WordPress). 
+A (*work-in-progress*) converter to migrate from [Invision Community (Power Board) v4](https://invisioncommunity.com/) to [bbPress](https://bbpress.org/) (forums software for WordPress), built as a WordPress plugin.
 
 Tested from Invision Community 4.3.6 to [bbPress 2.6-rc-6](https://bbpress.org/download/) on WordPress 4.9.8 and PHP 7.2.
 
 ## Installation and Use
 
-1. Edit `InvisionV4.php` line 21 to add the source server uploads url for file import.
-2. Drop `InvisionV4.php` into `wp-content/plugins/bbpress/includes/admin/converters/`
-3. Navigate to WordPress Admin Dashboard / Tools / Forums / Import Forums at `/wp-admin/tools.php?page=bbp-converter`
-4. Fill in the source database details and hit `Start`
-5. Manually set your forum titles and descriptions
+* (optional) Install and activate [Redirection](https://wordpress.org/plugins/redirection/) plugin to ensure old links continue to work.
+* (optional) Install and activate and [WP User Avatar](https://wordpress.org/plugins/wp-user-avatar/) plugin.
+
+1. Edit `bbPress-Invision-v4-Converter.php` line 13 to add the source server uploads url for file import. If the old forum is offline, copy its uploads folder somewhere http accessible and use that path.
+2. Install the plugin files into `wp-content/plugins/bbpress/includes/admin/converters/bbPress-Invision-v4-Converter/` and activate.
+3. Navigate to WordPress Admin Dashboard / Tools / Forums / Import Forums at `wp-admin/tools.php?page=bbp-converter`.
+4. Fill in the source database details and hit `Start`.
+5. Manually set your forum titles and descriptions.
 6. Run Tools/Repair Forums : Recalculate last activity in each topic and forum.
 
+This plugin must remain active in order for users' Invision passwords to continue to work with WordPress (each user needs to log in once for the password to be saved natively).
 ## TODO
 
 There is still work to complete before considering this production quality and submitting to bbPress core. The forum users and content does import, for the most part.

@@ -45,7 +45,7 @@ class InvisionV4 extends BBP_Converter_Base {
 		$url = wp_parse_url($forums_url);
 		$this->forums_relative_url = trailingslashit( $url['path'] );
 
-		$this->ipb_uploads_url = 'https://forum.enhancedathlete.com/uploads';
+		$this->ipb_uploads_url = get_option( 'bbpress_converter_ipb_uploads_url' );
 
 		$this->rest_server = rest_get_server();
 
