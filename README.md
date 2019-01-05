@@ -112,14 +112,6 @@ Since this is based off the v3 importer, the same unimplemented features from v3
 
 `core_widgets`
 
-### Announcements
-
-Announcements act as special pinned posts that appear above the list of forums. How to pin to top of index forums list?
-
-`core_announcements`
-
-for the first three posts everyone sees
-
 ### Forum Dates
 
 This currenly uses today's date for the forum creation date. It could maybe be assumed from the oldest post in the forum.

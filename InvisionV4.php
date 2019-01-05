@@ -16,6 +16,8 @@
  */
 class InvisionV4 extends BBP_Converter_Base {
 
+	public const ANNOUNCEMENT_POST_TYPE = "announcement-temp";
+
 	private $rest_server;
 
 	private $forums_relative_url;
@@ -407,6 +409,160 @@ class InvisionV4 extends BBP_Converter_Base {
 			'to_fieldname'    => '_ipb_topic_title_seo'
 		);
 
+		/** Announcements Section *****************************************************/
+
+		// Changes IPB announcements to super stickies with no parent forum
+
+		$this->field_map[] = array(
+			'to_type'      => self::ANNOUNCEMENT_POST_TYPE,
+			'to_fieldname' => 'post_type',
+			'default'      => self::ANNOUNCEMENT_POST_TYPE
+		);
+
+		$this->field_map[] = array(
+			'to_type'      => self::ANNOUNCEMENT_POST_TYPE,
+			'to_fieldname' => 'post_status',
+			'default'      => 'publish'
+		);
+
+		// Old announcement id (stored negative to avoid clashing with topic ids)
+		// I'm afraid to use another meta key, assuming it's referred to widely
+		$this->field_map[] = array(
+			'from_tablename'  => 'core_announcements',
+			'from_fieldname'  => 'announce_id',
+			'to_type'         => self::ANNOUNCEMENT_POST_TYPE,
+			'to_fieldname'    => '_bbp_old_topic_id',
+			'callback_method' => '__return_negative'
+		);
+		// Storing it properly here for use in 404 redirection below
+		$this->field_map[] = array(
+			'from_tablename'  => 'core_announcements',
+			'from_fieldname'  => 'announce_id',
+			'to_type'         => self::ANNOUNCEMENT_POST_TYPE,
+			'to_fieldname'    => '_bbp_old_announcement_id',
+		);
+
+		// Announcement reply count
+		// IPB announcements don't have replies
+		// TODO: from_fieldname is doing nothing here. Is __return_zero callback the best way to do this?
+		$this->field_map[] = array(
+			'to_type'         => self::ANNOUNCEMENT_POST_TYPE,
+			'to_fieldname'    => '_bbp_reply_count',
+			'default'         => 0
+		);
+
+		// Announcement parent forum id is always 0
+		$this->field_map[] = array(
+			'to_type'         => self::ANNOUNCEMENT_POST_TYPE,
+			'to_fieldname'    => '_bbp_forum_id',
+			'default'         => 0
+		);
+
+		// Announcement author.
+		$this->field_map[] = array(
+			'from_tablename'  => 'core_announcements',
+			'from_fieldname'  => 'announce_member_id',
+			'to_type'         => self::ANNOUNCEMENT_POST_TYPE,
+			'to_fieldname'    => 'post_author',
+			'callback_method' => 'callback_userid'
+		);
+
+		// Announcement content.
+		$this->field_map[] = array(
+			'from_tablename'  => 'core_announcements',
+			'from_fieldname'  => 'announce_content',
+			'to_type'         => self::ANNOUNCEMENT_POST_TYPE,
+			'to_fieldname'    => 'post_content',
+			'callback_method' => 'callback_html'
+		);
+
+		// Announcement title.
+		$this->field_map[] = array(
+			'from_tablename'  => 'core_announcements',
+			'from_fieldname'  => 'announce_title',
+			'to_type'         => self::ANNOUNCEMENT_POST_TYPE,
+			'to_fieldname'    => 'post_title'
+		);
+
+		// Announcement slug (Clean name to avoid conflicts)
+		$this->field_map[] = array(
+			'from_tablename'  => 'core_announcements',
+			'from_fieldname'  => 'announce_seo_title',
+			'to_type'         => self::ANNOUNCEMENT_POST_TYPE,
+			'to_fieldname'    => 'post_name',
+			'callback_method' => 'callback_slug'
+		);
+
+		// Always set announcement parent post id to 0
+		$this->field_map[] = array(
+			'to_type'         => self::ANNOUNCEMENT_POST_TYPE,
+			'to_fieldname'    => 'post_parent',
+			'default'         => 0
+		);
+
+		// Announcement dates.
+		// unix time
+		$this->field_map[] = array(
+			'from_tablename'  => 'core_announcements',
+			'from_fieldname'  => 'announce_start',
+			'to_type'         => self::ANNOUNCEMENT_POST_TYPE,
+			'to_fieldname'    => 'post_date',
+			'callback_method' => 'callback_datetime'
+		);
+		$this->field_map[] = array(
+			'from_tablename'  => 'core_announcements',
+			'from_fieldname'  => 'announce_start',
+			'to_type'         => self::ANNOUNCEMENT_POST_TYPE,
+			'to_fieldname'    => 'post_date_gmt',
+			'callback_method' => 'callback_datetime'
+		);
+		$this->field_map[] = array(
+			'from_tablename'  => 'core_announcements',
+			'from_fieldname'  => 'announce_start',
+			'to_type'         => self::ANNOUNCEMENT_POST_TYPE,
+			'to_fieldname'    => 'post_modified',
+			'callback_method' => 'callback_datetime'
+		);
+		$this->field_map[] = array(
+			'from_tablename'  => 'core_announcements',
+			'from_fieldname'  => 'announce_start',
+			'to_type'         => self::ANNOUNCEMENT_POST_TYPE,
+			'to_fieldname'    => 'post_modified_gmt',
+			'callback_method' => 'callback_datetime'
+		);
+		$this->field_map[] = array(
+			'from_tablename' => 'core_announcements',
+			'from_fieldname' => 'announce_start',
+			'to_type'        => self::ANNOUNCEMENT_POST_TYPE,
+			'to_fieldname'   => '_bbp_last_active_time',
+			'callback_method' => 'callback_datetime'
+		);
+
+		// Store the title URL fragment for later creating the 404 redirect
+		$this->field_map[] = array(
+			'from_tablename'  => 'core_announcements',
+			'from_fieldname'  => 'announce_seo_title',
+			'to_type'         => self::ANNOUNCEMENT_POST_TYPE,
+			'to_fieldname'    => '_ipb_announcement_title_seo'
+		);
+
+		// Close bbPress topic because it's an announcement (and IPB announcements didn't have replies)
+		$this->field_map[] = array(
+			'to_type'         => self::ANNOUNCEMENT_POST_TYPE,
+			'to_fieldname'    => '_ipb_topic_closed',
+			'default'         => 'closed'
+		);
+
+		// 0 for hidden, 1 for active
+		// SELECT DISTINCT(announce_active) FROM ipbforum.core_announcements;
+		$this->field_map[] = array(
+			'from_tablename'  => 'core_announcements',
+			'from_fieldname'  => 'announce_active',
+			'to_type'         => self::ANNOUNCEMENT_POST_TYPE,
+			'to_fieldname'    => '_ipb_announce_active'
+		);
+
+
 		/** Tags Section ******************************************************/
 
 		// Topic id.
@@ -628,6 +784,58 @@ class InvisionV4 extends BBP_Converter_Base {
 	 */
 	public function info() {
 		return '';
+	}
+
+
+	/**
+	 * Imports announcements as super-stickies.
+	 *
+	 * Temporarily registers a post type for importing which is then changed to topic.
+	 *
+	 * @param int $start
+	 *
+	 * @return bool
+	 */
+	public function convert_topic_super_stickies( $start = 1 ) {
+
+		register_post_type( InvisionV4::ANNOUNCEMENT_POST_TYPE );
+
+		$success = $this->convert_table( InvisionV4::ANNOUNCEMENT_POST_TYPE, $start );
+
+		/** @var WP_Post[] $new_posts */
+		$new_posts = get_posts( array(
+			'post_type' => InvisionV4::ANNOUNCEMENT_POST_TYPE,
+		));
+
+		foreach( $new_posts as $announcement ) {
+			set_post_type( $announcement->ID, 'topic' );
+
+			$ipb_announce_active = get_post_meta( $announcement->ID, '_ipb_announce_active', true );
+
+			if( $ipb_announce_active != 1 ) {
+
+				// TODO:
+				error_log(__FUNCTION__ . ' This is reporting success, but the topic is still approved.');
+				error_log( '$ipb_announce_active ' . $announcement->ID . ' : ' . $ipb_announce_active );
+
+				$result = bbp_unapprove_topic( $announcement->ID );
+
+				error_log( 'bbp_unapprove_topic ' . $announcement->ID . ' : ' . $result );
+			}
+
+			delete_post_meta( $announcement->ID, '_ipb_announce_active' );
+
+			bbp_stick_topic( $announcement->ID, true );
+
+			bbp_close_topic( $announcement->ID );
+
+		}
+
+		return $success;
+	}
+
+	public function __return_negative( $value ) {
+		return -1 * abs( $value );
 	}
 
 	/**
@@ -922,29 +1130,25 @@ class InvisionV4 extends BBP_Converter_Base {
 
 		$old_seo_meta_key = array(
 			'forum' => '_ipb_forum_name_seo',
-			'topic' => '_ipb_topic_title_seo'
+			'topic' => '_ipb_topic_title_seo',
+			'announcement' => '_ipb_announcement_title_seo'
 		);
 
-		if( $meta_key != $old_seo_meta_key['forum'] && $meta_key != $old_seo_meta_key['topic'] ) {
+		$post_type = array_search ($meta_key, $old_seo_meta_key);
+
+		if( false == $post_type ) {
 			return;
 		}
 
-		$post = get_post( $post_ID );
-
-		$old_id_meta_key = array(
-			'forum' => '_bbp_old_forum_id',
-			'topic' => '_bbp_old_topic_id'
-		);
-
-		$old_id = get_post_meta( $post_ID, $old_id_meta_key[$post->post_type], true );
+		$old_id = get_post_meta( $post_ID, "_bbp_old_{$post_type}_id", true );
 
 		if( false === $old_id ) {
 			return;
 		}
 
-		$old_url = "/$post->post_type/$old_id-$_meta_value";
+		$old_url = "/$post_type/$old_id-$_meta_value";
 
-		// Can't test if it is a valid URL on private forums.
+		// Can't auto test if it is a valid URL on private forums.
 
 		$this->create_redirect( $old_url, $post_ID );
 
