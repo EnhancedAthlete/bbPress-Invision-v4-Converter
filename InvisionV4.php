@@ -850,6 +850,20 @@ class InvisionV4 extends BBP_Converter_Base {
 		return $success;
 	}
 
+	/**
+	 * Run repairs after import to recalculate metadata
+	 *
+	 * @return bool
+	 */
+	public function clean() {
+
+		// Voice count was not being calculated after import
+		// Forum Last Posts were appearing as "No Topics"
+		bbp_admin_repair_freshness();
+
+		return parent::clean();
+	}
+
 	public function __return_negative( $value ) {
 		return -1 * abs( $value );
 	}
