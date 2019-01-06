@@ -861,7 +861,68 @@ class InvisionV4 extends BBP_Converter_Base {
 		// Forum Last Posts were appearing as "No Topics"
 		bbp_admin_repair_freshness();
 
+		$this->calculateSetReturnForumDateFromOldestPost();
+
 		return parent::clean();
+	}
+
+
+	function calculateSetReturnForumDateFromOldestPost( $forum_id = 0 ) {
+
+		/** @var WP_Post[] $oldest_topics */
+		$oldest_topics = array();
+
+		/** @var WP_Post[] $oldest_topic */
+		$oldest_topics_in_forum = get_posts( array(
+			'post_type'      => 'topic',
+			'post_parent'      => $forum_id,
+			'order_by'       => 'publish_date',
+			'order'          => 'ASC',
+			'posts_per_page' => 1
+		) );
+
+		$oldest_topics = array_merge( $oldest_topics, $oldest_topics_in_forum );
+
+		$subforum_ids = get_posts( array(
+			'post_type' => 'forum',
+			'fields'    => 'ids',
+			'post_parent'  => $forum_id,
+		) );
+
+		foreach($subforum_ids as $subforum_id) {
+
+			$oldest_topics[] = $this->calculateSetReturnForumDateFromOldestPost( $subforum_id );
+		}
+
+		/** @var WP_Post $oldest_topic */
+		$oldest_topic = null;
+
+		foreach( $oldest_topics as $topic ) {
+
+			if( $oldest_topic == null ) {
+
+				$oldest_topic = $topic;
+				continue;
+			}
+
+			if( strtotime( $topic->post_date ) <  strtotime( $oldest_topic->post_date ) ) {
+
+				$oldest_topic = $topic;
+			}
+		}
+
+		if( $oldest_topic != null && $forum_id != 0 ) {
+
+			wp_update_post(
+				array(
+					'ID'            => $forum_id,
+					'post_date'     => $oldest_topic->post_date,
+					'post_date_gmt' => $oldest_topic->post_date
+				)
+			);
+		}
+
+		return $oldest_topic;
 	}
 
 	public function __return_negative( $value ) {
