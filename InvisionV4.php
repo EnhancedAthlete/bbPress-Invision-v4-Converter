@@ -578,9 +578,25 @@ class InvisionV4 extends BBP_Converter_Base {
 		$this->field_map[] = array(
 			'from_tablename'  => 'core_tags',
 			'from_fieldname'  => 'tag_text',
+			'from_expression' => 'WHERE tag_text IS NOT NULL',
 			'to_type'         => 'tags',
 			'to_fieldname'    => 'name'
 		);
+
+		$this->field_map[] = array(
+			'to_type'         => 'tags',
+			'to_fieldname'    => 'description',
+			'default'         => ''
+		);
+
+		$this->field_map[] = array(
+			'from_tablename'  => 'core_tags',
+			'from_fieldname'  => 'tag_text',
+			'to_type'         => 'tags',
+			'to_fieldname'    => 'slug',
+			'callback_method' => 'callback_slug'
+		);
+
 
 		/** Reply Section *****************************************************/
 
