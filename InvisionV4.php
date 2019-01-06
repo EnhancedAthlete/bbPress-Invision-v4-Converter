@@ -1291,6 +1291,11 @@ class InvisionV4 extends BBP_Converter_Base {
 	 * Once the _ipb_user_group user meta key is set, this function uses its value to set the appropriate bbPress
 	 * role for that user.
 	 *
+	 * IPB defaults are found in install/done.php lines 47 - 62
+	 *
+	 * SELECT DISTINCT(member_group_id) FROM ipbforum.core_members
+	 * Only [3, 4, 6] in our db.
+	 *
 	 * @param int    $mid        The meta ID after successful update.
 	 * @param int    $user_id  Object ID.
 	 * @param string $meta_key   Meta key.
@@ -1304,29 +1309,80 @@ class InvisionV4 extends BBP_Converter_Base {
 			return;
 		}
 
-		if( $_meta_value != 3) {
-			error_log( 'setting role ' . $_meta_value . ' for user ' . $user_id );
+		switch ( $_meta_value ) {
+			case 2:
+				// 2: IPB Guests => bbPress Spectators
+				bbp_set_user_role( $user_id, 'bbp_spectator' );
+				break;
+			case 3:
+				// 3: IPB Members => bbPress Participant
+				// => the default
+				break;
+			case 4:
+				// 4: IPB administrators => bbPress Keymasters
+				bbp_set_user_role( $user_id, 'bbp_keymaster' );
+				break;
+			case 6:
+				// 6: IPB moderators => bbPress Moderators
+				bbp_set_user_role( $user_id, 'bbp_moderator' );
+				break;
 		}
-		delete_user_meta( $user_id, $meta_key, $_meta_value );
 
-		// 3: IPB Members => bbPress Participant
-		if( 3 == $_meta_value ) {
+		delete_user_meta( $user_id, $meta_key, $_meta_value );
+	}
+
+	 * SELECT DISTINCT(announce_active) FROM ipbforum.core_announcements [0, 1]
+	 * SELECT DISTINCT(approved) FROM ipbforum.forums_topics [-1, 1]
+	 *
+	 * @param int    $mid        The meta ID after successful update.
+	 * @param int    $post_id  Object ID.
+	 * @param string $meta_key   Meta key.
+	 * @param mixed  $meta_value Meta value.
+	 */
+	public function set_post_hidden( $mid, $post_id, $meta_key, $_meta_value ) {
+
+		$ipb_hidden_meta_key = array(
+			'topic'         => '_ipb_topic_approved',
+			'post'          => '_ipb_post_queued'
+		);
+
+		$post_type = array_search( $meta_key, $ipb_hidden_meta_key );
+
+		if( false == $post_type ) {
 			return;
 		}
 
-		// 2: IPB Guests => bbPress Spectators
-		if( 2 == $_meta_value ) {
-			bbp_set_user_role( $user_id, 'bbp_spectator' );
+		$hide_post = false;
+
+		switch ( $post_type ) {
+			case 'topic':
+				$hide_post = $_meta_value != 1;
+				break;
+			case 'post':
+				$hide_post = $_meta_value != 0;
+				break;
 		}
 
-		// 4: IPB administrators => bbPress Keymasters
-		if( 4 == $_meta_value ) {
-			bbp_set_user_role( $user_id, 'bbp_keymaster' );
+		if( $hide_post ) {
+			bbp_unapprove_topic( $post_id );
 		}
 
-		// 6: IPB moderators => bbPress Moderators
-		if( 6 == $_meta_value ) {
-			bbp_set_user_role( $user_id, 'bbp_moderator' );
+		delete_meta( $mid );
+	}
+
+	/***
+	 *
+	 * @param int    $mid        The meta ID after successful update.
+	 * @param int    $post_id    Object ID.
+	 * @param string $meta_key   Meta key.
+	 * @param mixed  $meta_value Meta value.
+	 */
+	public function set_post_closed( $mid, $post_id, $meta_key, $_meta_value ) {
+
+		if( '_ipb_topic_closed' != $meta_key) {
+			return;
 		}
+
+		if ( 'closed' == $_meta_value ) {
 	}
 }
