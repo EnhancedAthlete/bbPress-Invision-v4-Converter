@@ -54,6 +54,8 @@ class InvisionV4 extends BBP_Converter_Base {
 
 		add_action( "added_user_meta", array( $this, 'set_user_role'), 20, 4 );
 
+		add_action( "added_user_meta", array( $this, 'set_user_ban'), 25, 4 );
+
 		add_action( "added_post_meta", array( $this, 'set_post_hidden'), 20, 4 );
 
 		add_action( "added_post_meta", array( $this, 'set_post_closed'), 20, 4 );
@@ -820,6 +822,14 @@ class InvisionV4 extends BBP_Converter_Base {
 			'to_type'         => 'user',
 			'to_fieldname'    => '_ipb_user_group'
 		);
+
+		// User ban
+		$this->field_map[] = array(
+			'from_tablename'  => 'core_members',
+			'from_fieldname'  => 'temp_ban',
+			'to_type'         => 'user',
+			'to_fieldname'    => '_ipb_user_ban'
+		);
 	}
 
 	/**
@@ -1459,6 +1469,33 @@ class InvisionV4 extends BBP_Converter_Base {
 
 		delete_user_meta( $user_id, $meta_key, $_meta_value );
 	}
+
+	/***
+	 * Ban users who have temp_ban = -1 in ipbforum.core_members.temp_ban
+	 *
+	 * -1 is permanent ban. 0 is not banned. Unix timestamp is for temporary ban.
+	 *
+	 * @param int    $mid        The meta ID after successful update.
+	 * @param int    $user_id  Object ID.
+	 * @param string $meta_key   Meta key.
+	 * @param mixed  $meta_value Meta value.
+	 */
+	public function set_user_ban( $mid, $user_id, $meta_key, $_meta_value ) {
+
+		$user_ban_meta_key = '_ipb_user_ban';
+
+		if( $meta_key != $user_ban_meta_key ) {
+			return;
+		}
+
+		if( -1 == $_meta_value ) {
+
+			bbp_set_user_role( $user_id, 'bbp_blocked' );
+		}
+
+		delete_user_meta( $user_id, $meta_key, $_meta_value );
+	}
+
 
 	/***
 	 * Unapprove topics that were hidden in IPB
