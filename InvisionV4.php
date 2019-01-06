@@ -897,12 +897,15 @@ class InvisionV4 extends BBP_Converter_Base {
 	}
 
 
+	 *
+	 * @return WP_Post
+	 */
 	function calculateSetReturnForumDateFromOldestPost( $forum_id = 0 ) {
 
 		/** @var WP_Post[] $oldest_topics */
 		$oldest_topics = array();
 
-		/** @var WP_Post[] $oldest_topic */
+		/** @var WP_Post[] $oldest_topics_in_forum */
 		$oldest_topics_in_forum = get_posts( array(
 			'post_type'      => 'topic',
 			'post_parent'      => $forum_id,
@@ -1162,17 +1165,14 @@ class InvisionV4 extends BBP_Converter_Base {
 
 		$output_array = array();
 
-		if( false != preg_match_all('/<img (alt=".*?").*?src="<fileStore.core_Emoticons>\/emoticons\/(.*?)" srcset="<fileStore.core_Emoticons>\/emoticons\/(.*?) 2x" (title=".*?")/', $invision_markup, $output_array) ) {
+		if( false != preg_match_all('/<img.*?src="<fileStore.core_Emoticons\/?>\/emoticons\/(.*?.png).*?/emoticons/(.*?2x.png).*?>/', $invision_markup, $output_array) ) {
 
 			$ipb_uploads_url = untrailingslashit( $this->ipb_uploads_url );
 			$upload_dir = wp_upload_dir();
 			wp_mkdir_p($upload_dir['basedir'] . '/ipb_emoticons/');
 
-			$invision_markup = preg_replace('/alt=".*?"/', '', $invision_markup );
 			$invision_markup = preg_replace('/title=".*?"/', '', $invision_markup );
 
-			// $output_array[2] // angry.png
-			$local_file = $upload_dir['basedir'] . '/ipb_emoticons/' . $output_array[2][0];
 			if( !file_exists( $local_file ) ) {
 
 				copy( $ipb_uploads_url . '/emoticons/' . $output_array[2][0], $local_file );
@@ -1338,6 +1338,12 @@ class InvisionV4 extends BBP_Converter_Base {
 
 		update_user_meta($user_id, $this->wp_user_avatar_user_meta_key, $attachment_id);
 
+		// Set the owner of the user's image to themself
+		wp_update_post( array(
+			'ID'          => $attachment_id,
+			'post_author' => $user_id
+		));
+
 		delete_user_meta( $user_id, $old_avatar_meta_key );
 	}
 
@@ -1390,9 +1396,7 @@ class InvisionV4 extends BBP_Converter_Base {
 			} else {
 
 				$filename  = $results['file']; // Full path to the file
-				$local_url = $results['url'];  // URL to the file in the uploads dir
 				$type = $results['type']; // MIME type of the file
-				$wp_upload_dir = wp_upload_dir(); // Get the path to the upload directory.
 
 				$attachment = array (
 					'post_title' => preg_replace( '/\.[^.]+$/', '', basename( $filename ) ),
@@ -1402,6 +1406,10 @@ class InvisionV4 extends BBP_Converter_Base {
 				);
 
 				$img_id = wp_insert_attachment( $attachment, $filename  );
+
+				// Generate thumbnails
+				$attach_data = wp_generate_attachment_metadata( $img_id, $filename );
+				wp_update_attachment_metadata( $img_id,  $attach_data );
 
 				return $img_id;
 			}
