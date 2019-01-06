@@ -53,6 +53,11 @@ class InvisionV4 extends BBP_Converter_Base {
 		$this->wp_user_avatar_init();
 
 		add_action( "added_user_meta", array( $this, 'set_user_role'), 20, 4 );
+
+		add_action( "added_post_meta", array( $this, 'set_post_hidden'), 20, 4 );
+
+		add_action( "added_post_meta", array( $this, 'set_post_closed'), 20, 4 );
+
 	}
 
 	/**
@@ -409,6 +414,24 @@ class InvisionV4 extends BBP_Converter_Base {
 			'to_fieldname'    => '_ipb_topic_title_seo'
 		);
 
+		// approved 1 : visible. -1 : not visible
+		// from: SELECT DISTINCT(approved) FROM ipbforum.forums_topics
+		$this->field_map[] = array(
+			'from_tablename'  => 'forums_topics',
+			'from_fieldname'  => 'approved',
+			'to_type'         => 'topic',
+			'to_fieldname'    => '_ipb_topic_approved'
+		);
+
+		// SELECT DISTINCT(state) FROM ipbforum.forums_topics
+		$this->field_map[] = array(
+			'from_tablename'  => 'forums_topics',
+			'from_fieldname'  => 'state',
+			'to_type'         => 'topic',
+			'to_fieldname'    => '_ipb_topic_closed'
+		);
+
+
 		/** Announcements Section *****************************************************/
 
 		// Changes IPB announcements to super stickies with no parent forum
@@ -690,6 +713,13 @@ class InvisionV4 extends BBP_Converter_Base {
 			'to_type'         => 'reply',
 			'to_fieldname'    => 'post_modified_gmt',
 			'callback_method' => 'callback_datetime'
+		);
+
+		$this->field_map[] = array(
+			'from_tablename'  => 'forums_posts',
+			'from_fieldname'  => 'queued',
+			'to_type'         => 'reply',
+			'to_fieldname'    => '_ipb_post_queued',
 		);
 
 		/** User Section ******************************************************/
@@ -1422,6 +1452,9 @@ class InvisionV4 extends BBP_Converter_Base {
 		delete_user_meta( $user_id, $meta_key, $_meta_value );
 	}
 
+	/***
+	 * Unapprove topics that were hidden in IPB
+	 *
 	 * SELECT DISTINCT(announce_active) FROM ipbforum.core_announcements [0, 1]
 	 * SELECT DISTINCT(approved) FROM ipbforum.forums_topics [-1, 1]
 	 *
@@ -1443,20 +1476,19 @@ class InvisionV4 extends BBP_Converter_Base {
 			return;
 		}
 
-		$hide_post = false;
-
 		switch ( $post_type ) {
 			case 'topic':
-				$hide_post = $_meta_value != 1;
+				if( $_meta_value != 1 ) {
+					bbp_unapprove_topic( $post_id );
+				}
 				break;
 			case 'post':
-				$hide_post = $_meta_value != 0;
+				if( $_meta_value != 0 ) {
+					bbp_unapprove_reply( $post_id );
+				}
 				break;
 		}
 
-		if( $hide_post ) {
-			bbp_unapprove_topic( $post_id );
-		}
 
 		delete_meta( $mid );
 	}
@@ -1475,5 +1507,10 @@ class InvisionV4 extends BBP_Converter_Base {
 		}
 
 		if ( 'closed' == $_meta_value ) {
+			bbp_close_topic( $post_id );
+		}
+
+		delete_meta( $mid );
 	}
+
 }
