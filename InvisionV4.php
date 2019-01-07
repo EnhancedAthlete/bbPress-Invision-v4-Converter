@@ -22,12 +22,23 @@ class InvisionV4 extends BBP_Converter_Base {
 
 	private $forums_relative_url;
 
-	private $ipb_uploads_url;
-
 	private $redirection_group_name = 'bbPress';
 	private $redirection_group_id = null;
 
 	private $wp_user_avatar_user_meta_key = null;
+
+	private $ipb_uploads_url;
+
+	// No trailing slashes
+	private $wp_uploads_dir_path;
+
+	// begins with /
+	private $wp_uploads_url_path;
+
+	private $wp_emoticons_dir_path;
+	private $wp_emoticons_url_path;
+
+	private $ipb_emoticons_url;
 
 	/**
 	 * Main Constructor
@@ -35,6 +46,28 @@ class InvisionV4 extends BBP_Converter_Base {
 	 */
 	public function __construct() {
 		parent::__construct();
+
+		$this->configureUploadsPaths();
+
+		$this->rest_server = rest_get_server();
+
+		$this->redirection_init();
+
+		$this->wp_user_avatar_init();
+
+		add_action( "added_user_meta", array( $this, 'set_user_role'), 20, 4 );
+
+		add_action( "added_user_meta", array( $this, 'set_user_ban'), 25, 4 );
+
+		add_action( "added_post_meta", array( $this, 'set_post_hidden'), 20, 4 );
+
+		add_action( "added_post_meta", array( $this, 'set_post_closed'), 20, 4 );
+	}
+
+	/**
+	 * Adding trailing slash to all paths
+	 */
+	private function configureUploadsPaths() {
 
 		$wordpress_install_url = get_option('home');
 		$wordpress_install_url = trailingslashit($wordpress_install_url);
@@ -45,23 +78,22 @@ class InvisionV4 extends BBP_Converter_Base {
 		$url = wp_parse_url($forums_url);
 		$this->forums_relative_url = trailingslashit( $url['path'] );
 
-		$this->ipb_uploads_url = get_option( 'bbpress_converter_ipb_uploads_url' );
+		$this->ipb_uploads_url = trailingslashit( get_option( 'bbpress_converter_ipb_uploads_url' ) );
 
-		$this->rest_server = rest_get_server();
+		$upload_dir      = wp_upload_dir();
 
-		$this->redirection_init();
-		$this->wp_user_avatar_init();
+		$this->wp_uploads_dir_path = trailingslashit( $upload_dir['basedir'] );
+		$this->wp_uploads_url_path = str_replace( get_site_url(), '', $upload_dir['baseurl'] . '/' );
 
-		add_action( "added_user_meta", array( $this, 'set_user_role'), 20, 4 );
+		$wp_emoticons_dir_path = $this->wp_uploads_dir_path . 'ipb_emoticons/';
+		wp_mkdir_p( $wp_emoticons_dir_path );
 
-		add_action( "added_user_meta", array( $this, 'set_user_ban'), 25, 4 );
+		$this->wp_emoticons_dir_path = $wp_emoticons_dir_path;
+		$this->wp_emoticons_url_path = $this->wp_uploads_url_path . 'ipb_emoticons/';
 
-		add_action( "added_post_meta", array( $this, 'set_post_hidden'), 20, 4 );
-
-		add_action( "added_post_meta", array( $this, 'set_post_closed'), 20, 4 );
+		$this->ipb_emoticons_url = $this->ipb_uploads_url . 'emoticons/';
 
 	}
-
 	/**
 	 * The WordPress Redirection plugin can be used to avoid 404 links for users
 	 *
@@ -1113,11 +1145,18 @@ class InvisionV4 extends BBP_Converter_Base {
 		$invision_markup = preg_replace( '/\:rolleyes\:/', ':roll:',    $invision_markup );
 		$invision_markup = preg_replace( '/\:unsure\:/',   ':???:',     $invision_markup );
 
-		$invision_markup = $this->invision_member_links( $invision_markup );
-
 		$invision_markup = $this->invision_emoticons( $invision_markup );
 
+		$invision_markup = $this->invision_member_links( $invision_markup );
+
 		$invision_markup = $this->import_infusion_media( $invision_markup );
+
+		// iFrame embeds
+		$invision_markup = str_replace( "<___base_url___>/index.php?app=core&module=system&controller=embed&url=", '', $invision_markup );
+
+		// Any instances remaining of base url should be in local hyperlinks which should be addressed with Redirection
+		// /forum /discussion /topic (the affects the broken /applicattions...attachments URLs, but probably positively)
+		$invision_markup = str_replace( "<___base_url___>", '', $invision_markup );
 
 		// Now that Invision custom HTML has been stripped put the cleaned HTML back in $field
 		$field = $invision_markup;
@@ -1132,8 +1171,8 @@ class InvisionV4 extends BBP_Converter_Base {
 	 *
 	 * Uses the IPB username rather than calculating the WordPress username from IPB user id.
 	 *
-	 * href="<___base_url___>/profile/5299-banhammer/"
-	 * /forums/users/banhammer
+	 * href="<___base_url___>/profile/5299-brian/"
+	 * href="/forums/users/brian"
 	 *
 	 * @param $invision_markup
 	 *
@@ -1156,8 +1195,24 @@ class InvisionV4 extends BBP_Converter_Base {
 			}
 		}
 
+		$output_array = array();
+
+		// <a href="<___base_url___>/profile/BrianHenryIE" rel="">https://forum.enhancedathlete.com/profile/BrianHenryIE</a> you are absolutely right
+
+		if( false != preg_match_all('/<___base_url___>\/profile\/(\w*)/', $invision_markup, $output_array) ) {
+
+			foreach( $output_array[0] as $index => $anchor ) {
+
+				$bbpress_user_url = $this->forums_relative_url . 'users/' . $output_array[1][$index];
+
+				$invision_markup = str_replace( $anchor, $bbpress_user_url, $invision_markup );
+
+			}
+		}
+
 		return $invision_markup;
 	}
+
 
 	/**
 	 * I think $bbcode->Parse( $field ) was parsing bbCode in alt="&gt;:(" and title="&gt;:(" and replacing them
@@ -1171,53 +1226,83 @@ class InvisionV4 extends BBP_Converter_Base {
 	 */
 	private function invision_emoticons( $invision_markup ) {
 
-		// <img (alt=".*?").*?src="(<fileStore.core_Emoticons>.*?)" srcset="(<fileStore.core_Emoticons>.*?)" (title=".*?")
+		if ( null == $this->ipb_uploads_url ) {
+			return $invision_markup;
+		}
+
+		// sample string <img alt=":)" data-emoticon="" height="20" src="<fileStore.core_Emoticons>/emoticons/smile.png" srcset="<fileStore.core_Emoticons>/emoticons/smile@2x.png 2x" title=":)" width="20" /></p>
 
 		$output_array = array();
 
-		if( false != preg_match_all('/<img.*?src="<fileStore.core_Emoticons\/?>\/emoticons\/(.*?.png).*?/emoticons/(.*?2x.png).*?>/', $invision_markup, $output_array) ) {
+		if( false != preg_match_all('/<img.*?src="<fileStore.core_Emoticons\/?>\/emoticons\/(.*?.png).*?\/emoticons\/(.*?2x.png).*?>/', $invision_markup, $output_array) ) {
 
-			$ipb_uploads_url = untrailingslashit( $this->ipb_uploads_url );
-			$upload_dir = wp_upload_dir();
-			wp_mkdir_p($upload_dir['basedir'] . '/ipb_emoticons/');
+			foreach($output_array[0] as $key => $replace) {
 
-			$invision_markup = preg_replace('/title=".*?"/', '', $invision_markup );
+				$local_file = $this->wp_emoticons_dir_path . $output_array[1][$key];
+				if( !file_exists( $local_file ) ) {
+					$remote_file = $this->ipb_emoticons_url . $output_array[1][$key];
+						error_log( "Remote emoticon not found: " . $remote_file );
+					}
+				}
 
-			if( !file_exists( $local_file ) ) {
-
-				copy( $ipb_uploads_url . '/emoticons/' . $output_array[2][0], $local_file );
+				$local_file = $this->wp_emoticons_dir_path . $output_array[2][$key];
+				if( !file_exists( $local_file ) ) {
+					$remote_file = $this->ipb_emoticons_url . $output_array[2][$key];
+					if( !@copy( $remote_file, $local_file ) ) {
+						error_log( "Remote emoticon not found: " . $remote_file );
+					}
+				}
 			}
-			$invision_markup = str_replace( '<fileStore.core_Emoticons>/emoticons/' . $output_array[2][0], $upload_dir['baseurl'] . '/ipb_emoticons/' . $output_array[2][0], $invision_markup );
 
+			$invision_markup = str_replace('<fileStore.core_Emoticons/>/emoticons/', $this->wp_emoticons_url_path, $invision_markup );
+			$invision_markup = str_replace('<fileStore.core_Emoticons>/emoticons/', $this->wp_emoticons_url_path, $invision_markup );
+		}
 
-			$local_file = $upload_dir['basedir'] . '/ipb_emoticons/' . $output_array[3][0];
-			if( !file_exists( $local_file ) ) {
+		//  sample string <img src="<___base_url___>/uploads/emoticons/ohmy.png" alt=":o" />!</p>
 
 				copy( $ipb_uploads_url . '/emoticons/' . $output_array[3][0], $local_file );
+
+		if( false != preg_match_all('/.*?<___base_url___>\/uploads\/emoticons\/(.*?)"/', $invision_markup, $output_array) ) {
+
+
+				$emoticon = str_replace(' 2x', '', $emoticon );
+				if ( ! file_exists( $local_file ) ) {
+					$remote_file = $this->ipb_emoticons_url . $emoticon;
+					if( !@copy( $remote_file, $local_file ) ) {
+
+					}
+				}
+
+				$invision_markup       = str_replace( '<___base_url___>/uploads/emoticons/', $this->wp_emoticons_url_path, $invision_markup );
 			}
-
-			$invision_markup = str_replace( '<fileStore.core_Emoticons>/emoticons/' . $output_array[3][0], $upload_dir['baseurl'] . '/ipb_emoticons/' . $output_array[3][0], $invision_markup );
-
 		}
 
 		return $invision_markup;
 	}
 
+	/**
+	 * Searches post content for uploaded files and downloads them from the old location to wp-content/uploads.
+	 * Does not add to media library.
+	 *
+	 * @param $invision_markup
+	 *
+	 * @return mixed
+	 */
 	public function import_infusion_media( $invision_markup ) {
 
-		if( null == $this->ipb_uploads_url ) {
+		if ( null == $this->ipb_uploads_url ) {
 			return $invision_markup;
 		}
 
-		$ipb_uploads_url = untrailingslashit( $this->ipb_uploads_url );
-
 		$files_found = array();
+
+		// sample string <a class="ipsAttachLink ipsAttachLink_image" href="<fileStore.core_Attachment>/monthly_2017_09/Screenshot_20170910-152038.png.6f296e278cac3bc3d100c7c1e47a05d4.png" data-fileid="1633" rel=""><img class="ipsImage ipsImage_thumbnailed" data-fileid="1633" src="<fileStore.core_Attachment>/monthly_2017_09/Screenshot_20170910-152038.thumb.png.10c5324e28bcb06995193ac45425f4fa.png" alt="Screenshot_20170910-152038.thumb.png.10c5324e28bcb06995193ac45425f4fa.png" /></a>
 
 		if( false != preg_match_all('/<fileStore.core_Attachment>(.*?)"/', $invision_markup, $files_found) ) {
 
 			foreach($files_found[1] as $index => $file_path) {
 
-				$remote_file_url = $ipb_uploads_url . $file_path;
+				$remote_file_url = $this->ipb_uploads_url . $file_path;
 
 				$year_month_filename = array();
 
@@ -1227,24 +1312,63 @@ class InvisionV4 extends BBP_Converter_Base {
 					$month = $year_month_filename[2];
 					$filename = $year_month_filename[3];
 
-					$upload_dir = wp_upload_dir($year . '/' . $month );
+					$wp_uploads_subdir = $year . '/' . $month . '/';
 
-					$local_file_destination_path = $upload_dir['path'] . '/' . $filename;
+					wp_mkdir_p( $this->wp_uploads_dir_path . $wp_uploads_subdir );
 
-					copy( $remote_file_url, $local_file_destination_path );
+					$local_file_destination_path = $this->wp_uploads_dir_path . $wp_uploads_subdir  . $filename;
 
-					$local_file_url = $upload_dir['url'] . '/' . $filename;
+					if ( !@copy( $remote_file_url, $local_file_destination_path ) ) {
+						error_log( 'File not found: ' . $remote_file_url );
+					}
 
-					$string_to_replace = $files_found[0][$index];
+					$local_file_url = $this->wp_uploads_url_path . $wp_uploads_subdir . $filename;
 
-					$invision_markup = str_replace( $string_to_replace, $local_file_url . '"', $invision_markup );
+					$string_to_replace = '<fileStore.core_Attachment>' . $file_path;
+
+					$invision_markup = str_replace( $string_to_replace, $local_file_url, $invision_markup );
 
 				}
 			}
 		}
 
-		return $invision_markup;
+		// This seems to be for pre IPB3 files that were uploaded (maybe they don't even exist anymore).
 
+		// sample string <img src="<___base_url___>/uploads/editor/tk/74fbai1mvij3.jpg" alt="74fbai1mvij3.jpg" /></p>
+
+		$output_array = array();
+
+		if( false != preg_match_all('/.*?<___base_url___>\/uploads\/(.*?)".*?alt="(.*)"/', $invision_markup, $output_array) ) {
+
+			$wp_uploads_subdir = date('Y') . '/' . date('m') . '/';
+
+			$upload_path = $this->wp_uploads_dir_path . $wp_uploads_subdir;
+
+			wp_mkdir_p( $upload_path );
+
+			$upload_url = $this->wp_uploads_dir_path . $wp_uploads_subdir;
+
+			foreach ( $output_array[1] as $key => $remote_path_name ) {
+
+				$filename = $output_array[2][$key];
+
+				$local_file = $upload_path . $filename;
+				if ( ! file_exists( $local_file ) ) {
+
+					$remote_file_url = $this->ipb_uploads_url . $remote_path_name;
+
+					if ( !@copy( $remote_file_url, $local_file_destination_path ) ) {
+						error_log( 'File not found: ' . $remote_file_url );
+					}
+				}
+
+				$local_upload_url_path = $upload_url . $output_array[2][$key];
+				$invision_markup       = str_replace( '<___base_url___>/uploads/' . $remote_path_name, $local_upload_url_path, $invision_markup );
+			}
+
+		}
+
+		return $invision_markup;
 	}
 
 	/***
