@@ -43,6 +43,7 @@ class InvisionV4 extends BBP_Converter_Base {
 	/**
 	 * Main Constructor
 	 *
+	 * Runs long after WordPress init
 	 */
 	public function __construct() {
 		parent::__construct();
@@ -134,6 +135,12 @@ class InvisionV4 extends BBP_Converter_Base {
 
 			$response = rest_do_request( $request );
 			$data = $this->rest_server->response_to_data( $response, false );
+
+			if( !array_key_exists( 'items', $data ) ) {
+
+				error_log( 'redirection_init REST error' );
+				error_log( json_encode( $data ) );
+			}
 
 			foreach( $data['items'] as $item ) {
 				if( $item['id'] === $this->redirection_group_name ) {
@@ -1245,6 +1252,7 @@ class InvisionV4 extends BBP_Converter_Base {
 				$local_file = $this->wp_emoticons_dir_path . $output_array[1][$key];
 				if( !file_exists( $local_file ) ) {
 					$remote_file = $this->ipb_emoticons_url . $output_array[1][$key];
+					if( !@copy( $remote_file, $local_file ) ) {
 						error_log( "Remote emoticon not found: " . $remote_file );
 					}
 				}
@@ -1264,15 +1272,18 @@ class InvisionV4 extends BBP_Converter_Base {
 
 		//  sample string <img src="<___base_url___>/uploads/emoticons/ohmy.png" alt=":o" />!</p>
 
-				copy( $ipb_uploads_url . '/emoticons/' . $output_array[3][0], $local_file );
+		$output_array = array();
 
 		if( false != preg_match_all('/.*?<___base_url___>\/uploads\/emoticons\/(.*?)"/', $invision_markup, $output_array) ) {
 
+			foreach ( $output_array[1] as $key => $emoticon ) {
 
 				$emoticon = str_replace(' 2x', '', $emoticon );
+				$local_file = $this->wp_uploads_dir_path . $emoticon;
 				if ( ! file_exists( $local_file ) ) {
 					$remote_file = $this->ipb_emoticons_url . $emoticon;
 					if( !@copy( $remote_file, $local_file ) ) {
+						error_log( "Remote emoticon not found: " . $remote_file );
 
 					}
 				}
@@ -1468,9 +1479,7 @@ class InvisionV4 extends BBP_Converter_Base {
 			return;
 		}
 
-		$ipb_uploads_url = trailingslashit( $this->ipb_uploads_url );
-
-		$url = $ipb_uploads_url . $_meta_value;
+		$url = $this->ipb_uploads_url . $_meta_value;
 
 		$attachment_id = $this->image_upload( $url );
 
@@ -1661,7 +1670,6 @@ class InvisionV4 extends BBP_Converter_Base {
 				}
 				break;
 		}
-
 
 		delete_meta( $mid );
 	}
