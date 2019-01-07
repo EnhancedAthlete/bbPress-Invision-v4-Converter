@@ -897,26 +897,19 @@ class InvisionV4 extends BBP_Converter_Base {
 
 		foreach( $new_posts as $announcement ) {
 			set_post_type( $announcement->ID, 'topic' );
+			bbp_stick_topic( $announcement->ID, true );
+
+			bbp_close_topic( $announcement->ID );
 
 			$ipb_announce_active = get_post_meta( $announcement->ID, '_ipb_announce_active', true );
 
 			if( $ipb_announce_active != 1 ) {
 
-				// TODO:
-				error_log(__FUNCTION__ . ' This is reporting success, but the topic is still approved.');
-				error_log( '$ipb_announce_active ' . $announcement->ID . ' : ' . $ipb_announce_active );
-
-				$result = bbp_unapprove_topic( $announcement->ID );
-
-				error_log( 'bbp_unapprove_topic ' . $announcement->ID . ' : ' . $result );
+				bbp_unapprove_topic( $announcement->ID );
+				bbp_unstick_topic( $announcement->ID );
 			}
 
 			delete_post_meta( $announcement->ID, '_ipb_announce_active' );
-
-			bbp_stick_topic( $announcement->ID, true );
-
-			bbp_close_topic( $announcement->ID );
-
 		}
 
 		return $success;
