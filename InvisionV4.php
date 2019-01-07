@@ -916,22 +916,33 @@ class InvisionV4 extends BBP_Converter_Base {
 	}
 
 	/**
+	 * This is the last step in the conversion so is being overridden to do some cleanup
+	 *
 	 * Run repairs after import to recalculate metadata
 	 *
 	 * @return bool
 	 */
-	public function clean() {
+	public function convert_reply_to_parents( $start = 1 ) {
 
-		// Voice count was not being calculated after import
+		$success = parent::convert_reply_to_parents( $start );
+
+		require_once ( get_home_path() . '/wp-content/plugins/bbpress/includes/admin/tools/repair.php' );
+		
 		// Forum Last Posts were appearing as "No Topics"
 		bbp_admin_repair_freshness();
 
+		// Voice count was not being calculated after import
+		bbp_admin_repair_topic_voice_count();
+
 		$this->calculateSetReturnForumDateFromOldestPost();
 
-		return parent::clean();
+		return $success;
 	}
 
-
+	/**
+	 * Traverses forums setting the forum creation date to match its oldest topic or the oldest topic in its subforums
+	 *
+	 * @param int $forum_id
 	 *
 	 * @return WP_Post
 	 */
