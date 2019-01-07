@@ -2,7 +2,7 @@
 /*
 Plugin Name: EA WP bbPress Invision v4 Converter
 Plugin URI: https://github.com/EnhancedAthlete/bbPress-Invision-v4-Converter
-Description: Converts Invision v4 forums to bbPress
+Description: Converts Invision v4 forums to bbPress. NB: Plugin must remain active to allow imported users to log in.
 Version: 0.9
 Author: BrianHenryIE
 Author URI: http://BrianHenry.IE
@@ -11,12 +11,6 @@ License: GPL2
 
 // TODO: Add a UI for this
 update_option('bbpress_converter_ipb_uploads_url', 'https://forum.enhancedathlete.com/uploads' );
-
-//
-//add_action( 'init', function() {
-//
-//	register_post_type( "announcement-temp" );
-//});
 
 /**
  * Add this converter to bbPress's list of available converters
