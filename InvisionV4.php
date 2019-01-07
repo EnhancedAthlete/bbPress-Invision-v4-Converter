@@ -84,12 +84,13 @@ class InvisionV4 extends BBP_Converter_Base {
 		$upload_dir      = wp_upload_dir();
 
 		$this->wp_uploads_dir_path = trailingslashit( $upload_dir['basedir'] );
+
 		$this->wp_uploads_url_path = str_replace( get_site_url(), '', $upload_dir['baseurl'] . '/' );
 
 		$wp_emoticons_dir_path = $this->wp_uploads_dir_path . 'ipb_emoticons/';
 		wp_mkdir_p( $wp_emoticons_dir_path );
-
 		$this->wp_emoticons_dir_path = $wp_emoticons_dir_path;
+
 		$this->wp_emoticons_url_path = $this->wp_uploads_url_path . 'ipb_emoticons/';
 
 		$this->ipb_emoticons_url = $this->ipb_uploads_url . 'emoticons/';
@@ -934,7 +935,7 @@ class InvisionV4 extends BBP_Converter_Base {
 		$success = parent::convert_reply_to_parents( $start );
 
 		require_once ( get_home_path() . '/wp-content/plugins/bbpress/includes/admin/tools/repair.php' );
-		
+
 		// Forum Last Posts were appearing as "No Topics"
 		bbp_admin_repair_freshness();
 
@@ -1361,7 +1362,7 @@ class InvisionV4 extends BBP_Converter_Base {
 
 			wp_mkdir_p( $upload_path );
 
-			$upload_url = $this->wp_uploads_dir_path . $wp_uploads_subdir;
+			$upload_url = $this->wp_uploads_url_path. $wp_uploads_subdir;
 
 			foreach ( $output_array[1] as $key => $remote_path_name ) {
 
