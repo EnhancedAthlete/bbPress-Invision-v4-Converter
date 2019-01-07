@@ -10,7 +10,8 @@ License: GPL2
 */
 
 // TODO: Add a UI for this
-update_option('bbpress_converter_ipb_uploads_url', 'https://forum.enhancedathlete.com/uploads' );
+$ipb_uploads_url = 'https://forum.enhancedathlete.com/uploads';
+update_option('bbpress_converter_ipb_uploads_url', $ipb_uploads_url );
 
 /**
  * Add this converter to bbPress's list of available converters
