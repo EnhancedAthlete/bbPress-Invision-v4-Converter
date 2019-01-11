@@ -20,7 +20,7 @@ This plugin must remain active in order for users' Invision passwords to continu
 ## Completed
 
 * Users: passwords, roles, avatars (if [WP User Avatar](https://wordpress.org/plugins/wp-user-avatar/) active), banning.
-* Forums: importing.
+* Forums: importing*.
 * Topics: importing, unapproving, closing.
 * Super-stickies (announcements): importing, unapproving.
 * Replies: importing, unapproving, emoticons, images.
@@ -34,9 +34,9 @@ This plugin must remain active in order for users' Invision passwords to continu
 * Favorites
 * Subscriptions
 * Images / Attachments
-* Redirection: urls with trailing slashes don't redirect
 
-* Images/Attachments import config UI
+* Redirection: urls with trailing slashes don't redirect, .jpg doesn't redirect.
+* Images/Attachments import config UI.
 
 ### Users
 
@@ -110,22 +110,13 @@ Step 14
 
 
  
-### Images / Attachments
+### Images/Attachments Source/UI
 
-Attachments are not transferred. PHP's `copy` fails with 403 forbidden (i.e. not logged in). 
-`<a href="<___base_url___>/applications/core/interface/file/attachment.php?id=839" data-fileid="839" rel="">`
+Need to distinguish between the url location of ipb uploads folder for importing, vs. where it was when live.
+
+
 
 Maybe problems if WordPress is not installed in root (/)... 
-
-Missing files logged in error log.
-
-Embedded images are copied to the uploads folder but not associated with the user who uploaded them.
-
-Need to copy details from `core_attachments` into a temporary custom post type, add the attachment to the media library, set a 404 redirection from the old to the new.
-
-How to associate with the correct user?
-
-### Images/Attachments Source UI
 
 With the converter as-is, you need to edit `bbPress-Invision-v4-Converter.php` PHP ~line 13 `$ipb_uploads_url` to set a http source for the Invision uploads url.
 
@@ -178,11 +169,35 @@ bbPress doesnt support PMs, afaik. BuddyPress would be the appropriate plugin to
 
 Status updates (`core_member_status_updates`) & replies (`core_member_status_replies`).
 
+### Redirection
+
+Redirect plugin isn't invoked for .jpg files, only bare URLs.
+
+Redirect paths with/without trailing slash. (add a regex to remove it).
+
 ## Completed Notes
 
 ### Announcements
 
 Announcements uses a temporary post type `announcement-temp` which is only registered in the converter and the posts are immediately updated to become topics and their properties set.
+
+### Images / Attachments
+
+The import step `convert_anonymous_reply_authors()` is overridden to import attachments. (since I don't see a way to add a custom step and this one didn't seem to be in use).
+
+Missing files logged in error log.
+
+`core_attachments` is joined with `core_attachments_map` and details are copied into a temporary custom post type (`attachment-temp`). Once the data is in WordPress, the posts are looped through, the files downloaded from the remote server, the attachment created in the media library for the correct user, and the link in the original post updated to the new attachment location.
+
+A 404 redirection from the old path to the new is created, but needs to be exported from Redirection plugin to Apache/Nginx.
+
+A meta key is added to each attachment, `_bbp_attachment`, for use with [GD bbPress Attachments](https://wordpress.org/plugins/gd-bbpress-attachments/) plugin.
+
+This will work for forums attachments only, i.e. does not import messaging attachments or announcements.
+
+As posts are imported, their content is scanned for old attachments (local but not mentioned in the database) and a meta key is set which once saved to WordPress fires the action to download the file and store it in the WordPress Media Library.
+
+Attachment thumbnails as `<img ` in the html don't preserve the size they had been, rather they WordPress `medium` size is used.
 
 ### Emoticons
 
@@ -205,8 +220,6 @@ If [WP User Avatar](https://wordpress.org/plugins/wp-user-avatar/) plugin is act
 If the [WordPress Redirection plugin](https://wordpress.org/plugins/redirection/) is installed, this converter will add 404 redirects from old forum and topic URLs to the new bbPress posts.
 
 It does this by saving the `forums_forums.name_seo` and `forums_topics.title_seo` into WordPress post meta, and having an action on their save to use that data to build the old url, e.g. `/forum/6-forum-seo-name/`, and uses the Redirection REST API internally to add the entry pointing to `/?p=123`, so permalinks can be changed later, to a group named `bbPress`, then deletes the new meta key.
-
-// TODO: When the converter is set to start everything fresh, the group should be deleted
 
 ## Acknowledgements
 

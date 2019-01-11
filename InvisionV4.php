@@ -17,6 +17,7 @@
 class InvisionV4 extends BBP_Converter_Base {
 
 	public const ANNOUNCEMENT_POST_TYPE = "announcement-temp";
+	public const ATTACHMENT_POST_TYPE   = "attachment-temp";
 
 	private $rest_server;
 
@@ -63,6 +64,8 @@ class InvisionV4 extends BBP_Converter_Base {
 		add_action( "added_post_meta", array( $this, 'set_post_hidden'), 20, 4 );
 
 		add_action( "added_post_meta", array( $this, 'set_post_closed'), 20, 4 );
+
+		add_action( "added_post_meta", array( $this, 'process_has_url_attachment'), 20, 4 );
 	}
 
 	/**
@@ -375,6 +378,25 @@ class InvisionV4 extends BBP_Converter_Base {
 			'callback_method' => 'callback_html'
 		);
 
+		// Topic post id
+		// Because invision topic content is pulled from the forums_post table, the original post id is lost, then
+		// isn't available in the `wp_bbp_converter_translator` table for lookup.
+		$this->field_map[] = array(
+			'from_tablename'  => 'forums_posts',
+			'from_fieldname'  => 'post',
+			'to_type'         => 'topic',
+			'to_fieldname'    => '_bbp_old_reply_id'
+		);
+
+		// Post has URL attachment (as opposed to an attachment recorded in the IPB database).
+		$this->field_map[] = array(
+			'from_tablename'  => 'forums_posts',
+			'from_fieldname'  => 'post',
+			'to_type'         => 'topic',
+			'to_fieldname'    => '_has_url_attachment',
+			'callback_method' => 'callback_has_url_attachment'
+		);
+
 		// Topic title.
 		$this->field_map[] = array(
 			'from_tablename'  => 'forums_topics',
@@ -539,6 +561,15 @@ class InvisionV4 extends BBP_Converter_Base {
 			'to_type'         => self::ANNOUNCEMENT_POST_TYPE,
 			'to_fieldname'    => 'post_content',
 			'callback_method' => 'callback_html'
+		);
+
+		// Post has URL attachment (as opposed to an attachment recorded in the IPB database).
+		$this->field_map[] = array(
+			'from_tablename'  => 'core_announcements',
+			'from_fieldname'  => 'announce_content',
+			'to_type'         => self::ANNOUNCEMENT_POST_TYPE,
+			'to_fieldname'    => '_has_url_attachment',
+			'callback_method' => 'callback_has_url_attachment'
 		);
 
 		// Announcement title.
@@ -718,6 +749,15 @@ class InvisionV4 extends BBP_Converter_Base {
 			'callback_method' => 'callback_html'
 		);
 
+		// Post has URL attachment (as opposed to an attachment recorded in the IPB database).
+		$this->field_map[] = array(
+			'from_tablename'  => 'forums_posts',
+			'from_fieldname'  => 'post',
+			'to_type'         => 'reply',
+			'to_fieldname'    => '_has_url_attachment',
+			'callback_method' => 'callback_has_url_attachment'
+		);
+
 		// Reply parent topic id (If no parent, then 0)
 		$this->field_map[] = array(
 			'from_tablename'  => 'forums_posts',
@@ -763,6 +803,96 @@ class InvisionV4 extends BBP_Converter_Base {
 			'to_type'         => 'reply',
 			'to_fieldname'    => '_ipb_post_queued',
 		);
+
+
+		/** Attachment Section ******************************************************/
+
+		$this->field_map[] = array(
+			'to_type'      => self::ATTACHMENT_POST_TYPE,
+			'to_fieldname' => 'post_type',
+			'default'      => self::ATTACHMENT_POST_TYPE
+		);
+
+		// Attachment Id. Stored in post menu_order field (the post is temporary)
+		$this->field_map[] = array(
+			'from_tablename'  => 'core_attachments',
+			'from_fieldname'  => 'attach_id',
+			'to_type'         => self::ATTACHMENT_POST_TYPE,
+			'to_fieldname'    => 'menu_order',
+		);
+
+		// Attachment Filename.
+		$this->field_map[] = array(
+			'from_tablename'  => 'core_attachments',
+			'from_fieldname'  => 'attach_file',
+			'to_type'         => self::ATTACHMENT_POST_TYPE,
+			'to_fieldname'    => 'post_title',
+		);
+
+		// Attachment extension.
+		$this->field_map[] = array(
+			'from_tablename'  => 'core_attachments',
+			'from_fieldname'  => 'attach_ext',
+			'to_type'         => self::ATTACHMENT_POST_TYPE,
+			'to_fieldname'    => 'post_mime_type',
+		);
+
+		// Attachment URL path (relative)
+		// The relative path to the file including the filename, from the /uploads/ url, with no leading /
+		// e.g. monthly_2017_09/IMG_20170914_063031.jpg.2a66d5cfaa07c6b051bac09452b83c19.jpg
+		$this->field_map[] = array(
+			'from_tablename'  => 'core_attachments',
+			'from_fieldname'  => 'attach_location',
+			'to_type'         => self::ATTACHMENT_POST_TYPE,
+			'to_fieldname'    => 'post_content',
+		);
+
+		// Attachment User Id.
+		$this->field_map[] = array(
+			'from_tablename'  => 'core_attachments',
+			'from_fieldname'  => 'attach_member_id',
+			'to_type'         => self::ATTACHMENT_POST_TYPE,
+			'to_fieldname'    => 'post_author',
+			'callback_method' => 'callback_userid'
+		);
+
+		// Attachment Topic Id.
+		// id1 is ipb toic id, id2 is ipb post id.
+		$this->field_map[] = array(
+			'from_tablename'  => 'core_attachments_map',
+			'from_fieldname'  => 'id2',
+			'join_tablename'  => 'core_attachments',
+			'join_type'       => 'INNER',
+			'join_expression' => 'ON(core_attachments.attach_id = core_attachments_map.attachment_id) WHERE core_attachments_map.location_key = "forums_Forums"',
+			'to_type'         => self::ATTACHMENT_POST_TYPE,
+			'to_fieldname'    => 'post_parent',
+			'callback_method' => 'callback_reply_to'
+		);
+
+		// Attachment Date.
+		$this->field_map[] = array(
+			'from_tablename'  => 'core_attachments',
+			'from_fieldname'  => 'attach_date',
+			'to_type'         => self::ATTACHMENT_POST_TYPE,
+			'to_fieldname'    => 'post_date',
+			'callback_method' => 'callback_datetime'
+		);
+		$this->field_map[] = array(
+			'from_tablename'  => 'core_attachments',
+			'from_fieldname'  => 'attach_date',
+			'to_type'         => self::ATTACHMENT_POST_TYPE,
+			'to_fieldname'    => 'post_date_gmt',
+			'callback_method' => 'callback_datetime'
+		);
+
+		// Attachment thumbnail
+		$this->field_map[] = array(
+			'from_tablename'  => 'core_attachments',
+			'from_fieldname'  => 'attach_thumb_location',
+			'to_type'         => self::ATTACHMENT_POST_TYPE,
+			'to_fieldname'    => '_attachment_thumbnail_location',
+		);
+
 
 		/** User Section ******************************************************/
 
@@ -839,21 +969,24 @@ class InvisionV4 extends BBP_Converter_Base {
 			'to_fieldname'   => 'display_name'
 		);
 
-		// User avatar thumbnail.
+		// User avatar update date.
+		// Used to check the user had set a custom avatar
 		$this->field_map[] = array(
 			'from_tablename'  => 'core_members',
-			'from_fieldname'  => 'pp_thumb_photo',
+			'from_fieldname'  => 'photo_last_update',
 			'to_type'         => 'user',
-			'to_fieldname'    => '_ipb_user_thumb_photo'
+			'to_fieldname'    => '_ipb_user_photo_update_date'
 		);
 
 		// User avatar.
+		// Placed after thumbnail import so that meta key is set first
 		$this->field_map[] = array(
 			'from_tablename'  => 'core_members',
 			'from_fieldname'  => 'pp_main_photo',
 			'to_type'         => 'user',
 			'to_fieldname'    => '_ipb_user_photo'
 		);
+
 
 		// User group / role.
 		$this->field_map[] = array(
@@ -871,6 +1004,7 @@ class InvisionV4 extends BBP_Converter_Base {
 			'to_fieldname'    => '_ipb_user_ban'
 		);
 	}
+
 
 	/**
 	 * This method allows us to indicates what is or is not converted for each
@@ -901,6 +1035,7 @@ class InvisionV4 extends BBP_Converter_Base {
 		/** @var WP_Post[] $new_posts */
 		$new_posts = get_posts( array(
 			'post_type' => InvisionV4::ANNOUNCEMENT_POST_TYPE,
+			'numberposts' => -1,
 		));
 
 		foreach( $new_posts as $announcement ) {
@@ -921,6 +1056,149 @@ class InvisionV4 extends BBP_Converter_Base {
 		}
 
 		return $success;
+	}
+
+	/**
+	 * Import attachments.
+	 *
+	 * In testing, there never were any anonymous reply authors. This function is being overridden for importing
+	 * attachments.
+	 *
+	 * @param int $start
+	 *
+	 * @return bool
+	 */
+	public function convert_anonymous_reply_authors( $start = 1 ) {
+
+		register_post_type( InvisionV4::ATTACHMENT_POST_TYPE );
+
+		// Pull in the attachments as WordPress posts with custom post type
+		$result = $this->convert_table( InvisionV4::ATTACHMENT_POST_TYPE, $start );
+
+		/** @var WP_Post[] $new_posts */
+		$new_posts = get_posts( array(
+			'post_type' => InvisionV4::ATTACHMENT_POST_TYPE,
+			'numberposts' => -1,
+			'post_status' => 'draft'
+		));
+
+		// Download them and add them to the media library
+		foreach( $new_posts as $attachment_post ) {
+
+			$ipb_attachment_id          = $attachment_post->menu_order;
+			$filename                   = $attachment_post->post_title;
+			$file_ext                   = $attachment_post->post_mime_type;
+
+			// https://forum.enhancedathlete.com/uploads/monthly_2016_08/IMG_20160818.jpg.6873547ba2dc84ed4b08c362ae2657c7.jpg
+			$ipb_attachment_direct_url  = $this->ipb_uploads_url . $attachment_post->post_content;
+
+			// /uploads/monthly_2016_08/IMG_20160818.jpg.6873547ba2dc84ed4b08c362ae2657c7.jpg
+			$ipb_attachment_direct_url_relative =  wp_parse_url( $ipb_attachment_direct_url )[ 'path' ];
+
+			// https://forum.enhancedathlete.com/uploads/applications/core/interface/file/attachment.php?id=839
+			$ipb_attachment_php_url     = $this->ipb_uploads_url . 'applications/core/interface/file/attachment.php?id=' . $ipb_attachment_id;
+
+			// /uploads/applications/core/interface/file/attachment.php?id=839
+			$ipb_attachment_php_url_relative = wp_parse_url( $ipb_attachment_php_url )[ 'path' ];
+
+			$attachment_user_id         = $attachment_post->post_author;
+			$attachment_date            = $attachment_post->post_date;
+			$parent_post_id             = $attachment_post->post_parent;
+
+			// $attachment_post->post_content
+			// monthly_2016_08/IMG_20160818.jpg.6873547ba2dc84ed4b08c362ae2657c7.jpg
+			$upload_folder = null;
+			$year_month_array = array();
+			if( false != preg_match('/monthly_(\d{4})_(\d{2}).*/', $attachment_post->post_content, $year_month_array) ) {
+				$upload_folder = $year_month_array[1] . '/' . $year_month_array[2];
+			}
+
+			$wp_attachment_id = $this->upload_to_media_library( $ipb_attachment_direct_url, $upload_folder, $parent_post_id, $attachment_date, $file_ext, $filename );
+
+			if( is_wp_error( $wp_attachment_id ) ) {
+				// The file did not upload successfully
+				error_log( 'ipb attachment: ' . $ipb_attachment_id . ', wp user: ' . $attachment_user_id . ', wp parent post: ' . $parent_post_id );
+				wp_delete_post( $attachment_post->ID );
+				continue;
+			}
+
+			wp_update_post( array(
+				'ID'                => $wp_attachment_id,
+				'post_title'        => $filename,
+				'post_author'       => $attachment_user_id,
+				'post_date'         => $attachment_date,
+				'post_date_gmt'     => $attachment_date,
+			));
+
+
+			// Add redirects from old urls to the WordPress URL
+
+			// https://forum.enhancedathlete.com/wp-content/uploads/2019/01/asd.jpg
+			$new_attachment_url = wp_get_attachment_url( $wp_attachment_id );
+
+			// /wp-content/uploads/2019/01/asd.jpg
+			$new_attachment_url_relative = wp_parse_url( $new_attachment_url )[ 'path' ];
+
+			$this->create_redirect_to_local_url( $ipb_attachment_php_url_relative,    $new_attachment_url_relative );
+			$this->create_redirect_to_local_url( $ipb_attachment_direct_url_relative, $new_attachment_url_relative );
+
+
+			// Update the URL used in the post itself
+			// `<a href="/uploads/applications/core/interface/file/attachment.php?id=839" data-fileid="839" rel="">`
+
+			/** @var WP_Post $parent_post */
+			$parent_post = get_post( $parent_post_id );
+
+			if( null == $parent_post ) {
+
+				wp_delete_post( $attachment_post->ID );
+				continue;
+			}
+
+			$post_content = $parent_post->post_content;
+
+			$post_content = str_replace( $ipb_attachment_php_url_relative, $new_attachment_url_relative, $post_content );
+			$post_content = str_replace( $ipb_attachment_direct_url_relative, $new_attachment_url_relative, $post_content );
+
+			// Update the thumbnail
+			// <a class="ipsAttachLink ipsAttachLink_image" href="<fileStore.core_Attachment>/monthly_2017_09/Screenshot_20170910-152038.png.6f296e278cac3bc3d100c7c1e47a05d4.png" data-fileid="1633" rel=""><img class="ipsImage ipsImage_thumbnailed" data-fileid="1633" src="<fileStore.core_Attachment>/monthly_2017_09/Screenshot_20170910-152038.thumb.png.10c5324e28bcb06995193ac45425f4fa.png" alt="Screenshot_20170910-152038.thumb.png.10c5324e28bcb06995193ac45425f4fa.png" /></a>
+
+			// /monthly_2017_09/Screenshot_20170910-152038.thumb.png.10c5324e28bcb06995193ac45425f4fa.png
+			$ipb_thumbnail = get_post_meta( $attachment_post->ID, '_attachment_thumbnail_location', true );
+
+			if( !empty( $ipb_thumbnail ) ) {
+
+				// https://forum.enhancedathlete.com/uploads/monthly_2017_09/Screenshot_20170910-152038.thumb.png.10c5324e28bcb06995193ac45425f4fa.png
+				$ipb_thumbnail_url = $this->ipb_uploads_url . $ipb_thumbnail;
+
+				// /uploads/monthly_2017_09/Screenshot_20170910-152038.thumb.png.10c5324e28bcb06995193ac45425f4fa.png
+				$ipb_thumbnail_url_path = wp_parse_url( $ipb_thumbnail_url )[ 'path' ];
+
+				$image_arr = wp_get_attachment_image_src( $wp_attachment_id, 'medium' );
+				if ( false != $image_arr ) {
+
+					// https://forum-staging.gv1md4q4-liquidwebsites.com/wp-content/uploads/2019/01/Screen-Shot-2019-01-02-at-3.34.13-PM-176x300.png
+					$wp_thumbnail_url = $image_arr[0];
+
+					// /wp-content/uploads/2019/01/Screen-Shot-2019-01-02-at-3.34.13-PM-176x300.png
+					$wp_thumbnail_url_path = wp_parse_url( $wp_thumbnail_url )[ 'path' ];
+
+					$post_content = str_replace( $ipb_thumbnail_url_path, $wp_thumbnail_url_path, $post_content );
+				}
+			}
+
+			wp_update_post( array(
+				'ID' => $parent_post_id,
+				'post_content' => $post_content
+			));
+
+			// GD bbPress Attachments
+			update_post_meta( $wp_attachment_id, '_bbp_attachment', '1' );
+
+			wp_delete_post( $attachment_post->ID );
+		}
+
+		return $result;
 	}
 
 	/**
@@ -1161,7 +1439,11 @@ class InvisionV4 extends BBP_Converter_Base {
 
 		$invision_markup = $this->invision_member_links( $invision_markup );
 
-		$invision_markup = $this->import_infusion_media( $invision_markup );
+		// Update attachment links to relative URLs
+		// The files themselves will be imported later and redirections set up
+		// href="<fileStore.core_Attachment>/monthly_2017_09/Screenshot_20170910-152038.png.6f296e278cac3bc3d100c7c1e47a05d4.png"
+		// TODO: the explicit "/uploads" here is liable to become incorrect
+		$invision_markup = str_replace( "<fileStore.core_Attachment>", '/uploads', $invision_markup );
 
 		// iFrame embeds
 		$invision_markup = str_replace( "<___base_url___>/index.php?app=core&module=system&controller=embed&url=", '', $invision_markup );
@@ -1285,8 +1567,8 @@ class InvisionV4 extends BBP_Converter_Base {
 					$remote_file = $this->ipb_emoticons_url . $emoticon;
 					if( !@copy( $remote_file, $local_file ) ) {
 						error_log( "Remote emoticon not found: " . $remote_file );
-
 					}
+
 				}
 
 				$invision_markup       = str_replace( '<___base_url___>/uploads/emoticons/', $this->wp_emoticons_url_path, $invision_markup );
@@ -1297,94 +1579,122 @@ class InvisionV4 extends BBP_Converter_Base {
 	}
 
 	/**
-	 * Searches post content for uploaded files and downloads them from the old location to wp-content/uploads.
-	 * Does not add to media library.
+	 * Used to check if the forum post contains a local url link that won't be addressed by emoticons or attachments.
 	 *
-	 * @param $invision_markup
+	 * A meta key is set on the post, '_has_url_attachment', then `add_action` is used on meta data to catch when it
+	 * is applied, then the full post has been inserted into WordPress and can be manipulated to properly import the
+	 * attachment and assign to the post and correct user.
 	 *
-	 * @return mixed
+	 * @param $content
+	 *
+	 * @return string
 	 */
-	public function import_infusion_media( $invision_markup ) {
+	public function callback_has_url_attachment( $content ) {
 
-		if ( null == $this->ipb_uploads_url ) {
-			return $invision_markup;
+		if( false != stristr( $content, '<___base_url___>/uploads/')
+		    && false == stristr( $content, '<___base_url___>/uploads/emoticons') ) {
+
+			return 'yes';
+		}
+	}
+
+
+	/***
+	 * When a post mentions a local URL that is not in the IPB4 database, a meta key ~`_announcement_has_url_attachment`
+	 * is added with the value `yes` to mark it for processing here. When the meta is saved, the WordPress action
+	 * calls this method.
+	 *
+	 * It is done at this stage because the user_id and post_id are not available in the html callback.
+	 *
+	 * @param int    $mid        The meta ID after successful update.
+	 * @param int    $post_ID  Object ID.
+	 * @param string $meta_key   Meta key.
+	 * @param mixed  $meta_value Meta value.
+	 */
+	public function process_has_url_attachment( $mid, $post_ID, $meta_key, $_meta_value ) {
+
+		if( '_has_url_attachment' != $meta_key || 'yes' != $_meta_value) {
+			return;
 		}
 
-		$files_found = array();
+		$post = get_post( $post_ID );
 
-		// sample string <a class="ipsAttachLink ipsAttachLink_image" href="<fileStore.core_Attachment>/monthly_2017_09/Screenshot_20170910-152038.png.6f296e278cac3bc3d100c7c1e47a05d4.png" data-fileid="1633" rel=""><img class="ipsImage ipsImage_thumbnailed" data-fileid="1633" src="<fileStore.core_Attachment>/monthly_2017_09/Screenshot_20170910-152038.thumb.png.10c5324e28bcb06995193ac45425f4fa.png" alt="Screenshot_20170910-152038.thumb.png.10c5324e28bcb06995193ac45425f4fa.png" /></a>
+		$post_content = $post->post_content;
 
-		if( false != preg_match_all('/<fileStore.core_Attachment>(.*?)"/', $invision_markup, $files_found) ) {
-
-			foreach($files_found[1] as $index => $file_path) {
-
-				$remote_file_url = $this->ipb_uploads_url . $file_path;
-
-				$year_month_filename = array();
-
-				if( false != preg_match('/monthly_(\d{4})_(\d{2})\/(.*)/', $file_path, $year_month_filename ) ) {
-
-					$year = $year_month_filename[1];
-					$month = $year_month_filename[2];
-					$filename = $year_month_filename[3];
-
-					$wp_uploads_subdir = $year . '/' . $month . '/';
-
-					wp_mkdir_p( $this->wp_uploads_dir_path . $wp_uploads_subdir );
-
-					$local_file_destination_path = $this->wp_uploads_dir_path . $wp_uploads_subdir  . $filename;
-
-					if ( !@copy( $remote_file_url, $local_file_destination_path ) ) {
-						error_log( 'File not found: ' . $remote_file_url );
-					}
-
-					$local_file_url = $this->wp_uploads_url_path . $wp_uploads_subdir . $filename;
-
-					$string_to_replace = '<fileStore.core_Attachment>' . $file_path;
-
-					$invision_markup = str_replace( $string_to_replace, $local_file_url, $invision_markup );
-
-				}
-			}
-		}
-
-		// This seems to be for pre IPB3 files that were uploaded (maybe they don't even exist anymore).
+		// By this stage /uploads/emoticions should have been addressed
 
 		// sample string <img src="<___base_url___>/uploads/editor/tk/74fbai1mvij3.jpg" alt="74fbai1mvij3.jpg" /></p>
+		// has already been parsed above to
+		// sample string <img src="/uploads/editor/tk/74fbai1mvij3.jpg" alt="74fbai1mvij3.jpg" /></p>
 
 		$output_array = array();
 
-		if( false != preg_match_all('/.*?<___base_url___>\/uploads\/(.*?)".*?alt="(.*)"/', $invision_markup, $output_array) ) {
+		if( false != preg_match_all('/<img.*?src="\/uploads\/(.*?)".*?alt="(.*?)".*?>/', $post_content, $output_array) ) {
 
-			$wp_uploads_subdir = date('Y') . '/' . date('m') . '/';
+			$post_year  = date("Y", strtotime( $post->post_date ) );
+			$post_month = date("m", strtotime( $post->post_date ) );
 
-			$upload_path = $this->wp_uploads_dir_path . $wp_uploads_subdir;
-
-			wp_mkdir_p( $upload_path );
-
-			$upload_url = $this->wp_uploads_url_path. $wp_uploads_subdir;
+			$wp_uploads_subdir = $post_year . '/' . $post_month;
 
 			foreach ( $output_array[1] as $key => $remote_path_name ) {
 
-				$filename = $output_array[2][$key];
+				$remote_file_url = $this->ipb_uploads_url . $remote_path_name;
 
-				$local_file = $upload_path . $filename;
-				if ( ! file_exists( $local_file ) ) {
+				$attachment_id = $this->upload_to_media_library( $remote_file_url, $wp_uploads_subdir, $post->ID, $post->post_date );
 
-					$remote_file_url = $this->ipb_uploads_url . $remote_path_name;
+				if( is_wp_error( $attachment_id ) ) {
 
-					if ( !@copy( $remote_file_url, $local_file_destination_path ) ) {
-						error_log( 'File not found: ' . $remote_file_url );
-					}
+					error_log( 'Failed to fetch file : ' . $remote_file_url );
+
+					continue;
 				}
 
-				$local_upload_url_path = $upload_url . $output_array[2][$key];
-				$invision_markup       = str_replace( '<___base_url___>/uploads/' . $remote_path_name, $local_upload_url_path, $invision_markup );
+				$filename = $output_array[2][$key];
+
+				wp_update_post( array(
+					'ID'                => $attachment_id,
+					'post_title'        => $filename,
+					'post_author'       => $post->post_author,
+					'post_date'         => $post->post_date,
+					'post_date_gmt'     => $post->post_date,
+				));
+
+				$new_attachment_url          = wp_get_attachment_url( $attachment_id );
+				$new_attachment_url_relative = wp_parse_url( $new_attachment_url )[ 'path' ];
+
+				// Add redirect
+				$this->create_redirect_to_local_url( '/uploads/' . $remote_path_name, $new_attachment_url_relative );
+
+				// Replace full size image with linked thumbnail
+
+				$image_arr = wp_get_attachment_image_src( $attachment_id, 'medium' );
+				if ( false != $image_arr ) {
+
+					// https://forum-staging.gv1md4q4-liquidwebsites.com/wp-content/uploads/2019/01/Screen-Shot-2019-01-02-at-3.34.13-PM-176x300.png
+					$thumbnail_url = $image_arr[0];
+
+					// /wp-content/uploads/2019/01/Screen-Shot-2019-01-02-at-3.34.13-PM-176x300.png
+					$thumbnail_url_path = wp_parse_url( $thumbnail_url )[ 'path' ];
+
+					// TODO: Don't do this if there's already a link around it.
+
+					$img_link = '<a href="' . $new_attachment_url_relative . '"><img src="' . $thumbnail_url_path .'" alt="' . $filename . '" /></a>';
+
+					$post_content = str_replace( $output_array[0][$key], $img_link, $post_content );
+				} else {
+					$post_content = str_replace( '/uploads/' . $remote_path_name, $new_attachment_url_relative, $post_content );
+				}
+
+				update_post_meta( $attachment_id, '_bbp_attachment', '1' );
 			}
 
+			wp_update_post( array(
+				'ID'           => $post->ID,
+				'post_content' => $post_content
+			));
 		}
 
-		return $invision_markup;
+		delete_meta( $mid );
 	}
 
 	/***
@@ -1423,22 +1733,29 @@ class InvisionV4 extends BBP_Converter_Base {
 
 		$this->create_redirect( $old_url, $post_ID );
 
-		delete_post_meta( $post_ID, $meta_key );
+		delete_meta( $mid );
 	}
 
 	private function create_redirect( $from, $to_post_id ) {
+		return $this->create_redirect_to_local_url( $from, "?p=$to_post_id" );
+	}
 
+	// Don't preceed with a slash?
+	private function create_redirect_to_local_url( $from, $to_url ) {
 		// This should never happen since the calling method is added by an action set inside a check for the plugin.s
 		if( null == $this->redirection_group_id ) {
 			return;
 		}
+
+		// Strip the domain from input URL
+		$from = preg_replace('/https?:\/\/.*?\//', '/', $from);
 
 		$request = new WP_REST_Request( 'POST', '/redirection/v1/redirect' );
 		$request->set_query_params(
 			array(
 				'url'         => $from,
 				'action_data' => array (
-					'url' => "?p=$to_post_id"
+					'url' => $to_url
 				),
 				'action_type' => 'url',
 				'group_id'    => $this->redirection_group_id,
@@ -1462,66 +1779,111 @@ class InvisionV4 extends BBP_Converter_Base {
 	 */
 	public function add_wp_user_avatar( $mid, $user_id, $meta_key, $_meta_value ) {
 
-		$old_avatar_meta_key = '_ipb_user_photo';
+		$ipb_avatar_meta_key = '_ipb_user_photo';
 
-		if( $meta_key != $old_avatar_meta_key ) {
+		if( $meta_key != $ipb_avatar_meta_key ) {
 			return;
 		}
 
-		$old_avatar_thumb_meta_key = '_ipb_user_thumb_photo';
+		$user_avatar_update_date_meta_key = '_ipb_user_photo_update_date';
 
-		$avatar_thumb = get_user_meta( $user_id, $old_avatar_thumb_meta_key, true );
+		// unix time
+		$user_avatar_update_date = get_user_meta( $user_id, $user_avatar_update_date_meta_key, true );
 
-		delete_user_meta( $user_id, $old_avatar_thumb_meta_key );
+		delete_user_meta( $user_id, $user_avatar_update_date_meta_key );
+		delete_user_meta( $user_id, $ipb_avatar_meta_key );
 
 		// The thumbnail should be fetched and stored first
 		// Thumbnails only exist for user uploaded photos
-		if( empty( $avatar_thumb ) ) {
+		if( empty( $user_avatar_update_date ) ) {
 			return;
 		}
 
 		$url = $this->ipb_uploads_url . $_meta_value;
 
-		$attachment_id = $this->image_upload( $url );
+		$post_year  = date("Y", strtotime( $user_avatar_update_date ) );
+		$post_month = date("m", strtotime( $user_avatar_update_date ) );
 
-		update_user_meta($user_id, $this->wp_user_avatar_user_meta_key, $attachment_id);
+		$upload_folder = $post_year . '/' . $post_month;
+
+		$postdate = date("Y-m-d H:i:s", $user_avatar_update_date );
+
+		$attachment_id = $this->upload_to_media_library( $url, $upload_folder, null, $postdate );
+
+		if( is_wp_error( $attachment_id ) ) {
+			error_log('Failed to fetch file : ' . $url );
+			return;
+		}
+		update_user_meta( $user_id, $this->wp_user_avatar_user_meta_key, $attachment_id );
 
 		// Set the owner of the user's image to themself
 		wp_update_post( array(
-			'ID'          => $attachment_id,
-			'post_author' => $user_id
-		));
+			'ID'                => $attachment_id,
+			'post_author'       => $user_id,
+			'post_date'         => $postdate,
+			'post_date_gmt'     => $postdate,
+		) );
 
-		delete_user_meta( $user_id, $old_avatar_meta_key );
+
 	}
 
 
 	/**
-	 * @param $url
+	 * @param string $url
+	 * @param string $year_month     "yyyy/mm" to move to a specific folder. (Time formatted in 'yyyy/mm')
+	 * @param int    $parent_post_id id of the post to attach the file to
+	 * @param string $post_date      MySQL date for 'post_updated'
 	 *
 	 * @return int|WP_Error attachment id
 	 */
-	function image_upload( $url ) {
+	function upload_to_media_library( $url, $year_month = null, $parent_post_id = null, $post_date = null, $file_ext = null, $proper_filename = null ) {
 
 		// Gives us access to the download_url() and wp_handle_sideload() functions
 		require_once( ABSPATH . 'wp-admin/includes/file.php' );
 
+		if( null != $year_month ) {
+			// Make sure the folder exists. This may be addressed inside WP anyway?
+			wp_mkdir_p( $this->wp_uploads_dir_path . $year_month );
+		}
+
 		// Download file to temp dir
-		$timeout_seconds = 10;
+		$timeout_seconds = 20;
 		$temp_file = download_url( $url, $timeout_seconds );
 
 		if ( !is_wp_error( $temp_file ) ) {
 
-			$info = new SplFileInfo($url);
+			$name = is_null( $proper_filename ) ? basename( $url ) : $proper_filename;
+
+			$mime_type = mime_content_type( $temp_file );
+
+			if( is_null( $file_ext ) ) {
+				$mimes    = get_allowed_mime_types();
+				$file_ext = array_search( $mime_type, $mimes );
+				$file_ext = explode( '|', $file_ext )[0];
+			}
+
+			// ... because IPB adds a cache/unique string at the end of filenames
+			// either cut it off, or
+			// Add the file extension to its name if it's not already there.
+			$regex_output_array = array();
+			if( false != preg_match('/(.*?\.' . $file_ext . ')/i', $name, $regex_output_array) ) {
+				$name = $regex_output_array[1];
+			} elseif( substr($name , ( -1 * strlen( $file_ext ) ) ) != $file_ext ) {
+				$name = "$name.$file_ext";
+			}
 
 			// Array based on $_FILE as seen in PHP file uploads
 			$file = array(
-				'name'     => basename($url), // ex: wp-header-logo.png
-				'type'     => 'image/' . $info->getExtension(),
+				'name'     => $name, // ex: wp-header-logo.png
+				'type'     => $mime_type,
 				'tmp_name' => $temp_file,
 				'error'    => 0,
-				'size'     => filesize($temp_file),
+				'size'     => filesize( $temp_file ),
 			);
+
+			if( $file_ext ) {
+				$file['ext'] = $file_ext;
+			}
 
 			$overrides = array(
 				// Tells WordPress to not look for the POST form
@@ -1531,29 +1893,42 @@ class InvisionV4 extends BBP_Converter_Base {
 				// Default is true
 				'test_form' => false,
 
+				// Added since this is only run in the plugin, and assumes IPB had reasonable file upload restrictions
+				// 'test_type' => false,
+
 				// Setting this to false lets WordPress allow empty files, not recommended
 				// Default is true
 				'test_size' => true,
 			);
 
 			// Move the temporary file into the uploads directory
-			$results = wp_handle_sideload( $file, $overrides );
+			$results = wp_handle_sideload( $file, $overrides, $year_month );
 
 			if ( !empty( $results['error'] ) ) {
 				// Insert any error handling here
+				error_log('Error adding file to media library : ' . $url );
+				error_log( $name );
+				error_log( json_encode( $results ) );
+
+				return new WP_Error( '321', $results['error'] );
+
 			} else {
 
 				$filename  = $results['file']; // Full path to the file
-				$type = $results['type']; // MIME type of the file
+				$type      = $results['type']; // MIME type of the file
 
 				$attachment = array (
-					'post_title' => preg_replace( '/\.[^.]+$/', '', basename( $filename ) ),
+					'post_title'     => preg_replace( '/\.[^.]+$/', '', basename( $filename ) ),
 					'post_mime_type' => $type,
-					'post_status' => 'inherit',
-					'post_content' => '',
+					'post_status'    => 'inherit',
+					'post_content'   => '',
 				);
 
-				$img_id = wp_insert_attachment( $attachment, $filename  );
+				if( $post_date != null ) {
+					$attachment['post_date'] = $post_date;
+				}
+
+				$img_id = wp_insert_attachment( $attachment, $filename, $parent_post_id );
 
 				// Generate thumbnails
 				$attach_data = wp_generate_attachment_metadata( $img_id, $filename );
@@ -1561,6 +1936,8 @@ class InvisionV4 extends BBP_Converter_Base {
 
 				return $img_id;
 			}
+		} else {
+			return $temp_file;
 		}
 	}
 
