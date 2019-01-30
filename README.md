@@ -24,6 +24,7 @@ This plugin must remain active in order for users' Invision passwords to continu
 * Topics: importing, unapproving, closing.
 * Super-stickies (announcements): importing, unapproving.
 * Replies: importing, unapproving, emoticons, images.
+* Images / Attachments
 * Broken link redirection (if [Redirection](https://wordpress.org/plugins/redirection/) active).
 
 ## TODO
@@ -33,10 +34,11 @@ This plugin must remain active in order for users' Invision passwords to continu
 * Topics: unapproving reasons
 * Favorites
 * Subscriptions
-* Images / Attachments
-
 * Redirection: urls with trailing slashes don't redirect, .jpg doesn't redirect.
 * Images/Attachments import config UI.
+
+
+Forums reset doesn't work... i.e. media files remain and redirects remain. Redirects can be deleted in a single click. Imported attachments are marked `_bbp_attachment`.
 
 
 Use wp-cli to text search for hyperlinks and see if there are any weird ones remaining (see `convert_link...` tables).
@@ -48,6 +50,8 @@ Add table of IPB tables in this document and comment what has been converted and
 Avatar not showing on:
 https://forum-staging.gv1md4q4-liquidwebsites.com/forums/users/roro/
 (But is for other users)
+
+User stats on user page not correct, but replies etc do list. (need to run another repair)
 
 https://forum-staging.gv1md4q4-liquidwebsites.com/forums/topic/ 
 Redirects to:
