@@ -298,7 +298,7 @@ class InvisionV4 extends BBP_Converter_Base {
 
 		// Forum dates.
 		// I don't see anywhere IPB records the forum creation dates, so it defaults to now.
-		// Later figure out the oldest post in the forum.
+		// The last step figures out the oldest post in the forum and uses that
 		$this->field_map[] = array(
 			'to_type'         => 'forum',
 			'to_fieldname'    => 'post_date',

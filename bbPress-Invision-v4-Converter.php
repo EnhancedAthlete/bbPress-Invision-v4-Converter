@@ -11,7 +11,7 @@ License: GPL2
 
 // TODO: Add a UI for this
 $ipb_uploads_url = 'https://forum.enhancedathlete.com/uploads';
-update_option('bbpress_converter_ipb_uploads_url', $ipb_uploads_url );
+	update_option('bbpress_converter_ipb_uploads_url', $ipb_uploads_url );
 
 /**
  * Add this converter to bbPress's list of available converters
@@ -49,6 +49,6 @@ function add_action_links ($links){
 
 	$new_links = array('<a href="' . $importer_url . '">Open Importer</a>',);
 
-	return array_merge( $links, $new_links );
+	return array_merge( $new_links, $links );
 }
 add_filter( 'plugin_action_links_' . plugin_basename(__FILE__), 'add_action_links' );

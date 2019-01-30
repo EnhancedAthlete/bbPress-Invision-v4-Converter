@@ -38,6 +38,21 @@ This plugin must remain active in order for users' Invision passwords to continu
 * Redirection: urls with trailing slashes don't redirect, .jpg doesn't redirect.
 * Images/Attachments import config UI.
 
+
+Use wp-cli to text search for hyperlinks and see if there are any weird ones remaining (see `convert_link...` tables).
+
+
+Add table of IPB tables in this document and comment what has been converted and what has not
+
+
+Avatar not showing on:
+https://forum-staging.gv1md4q4-liquidwebsites.com/forums/users/roro/
+(But is for other users)
+
+https://forum-staging.gv1md4q4-liquidwebsites.com/forums/topic/ 
+Redirects to:
+https://forum-staging.gv1md4q4-liquidwebsites.com/forums/topic/topical-dnp/
+
 ### Users
 
 `ipbforum.core_members` values to consider importing:
@@ -46,7 +61,7 @@ This plugin must remain active in order for users' Invision passwords to continu
 |---|---|---|---|---|
 | `restrict_post` | `[0, -1]` `-1` means view only? | `bbp_set_user_role( $user_id, 'bbp_spectator' );`  |   |   |
 | `mod_posts` | `[0, -1]` `-1` means hold posts for moderation? |   |   |   |
-| `core_members.last_activity` | unix time | `update_user_meta( 'last_activity', '2019-01-05 20:26:47' );`  |   |   |
+| `last_activity` | unix time | `update_user_meta( 'last_activity', '2019-01-05 20:26:47' );`  |   |   |
 | `timezone` |   |   |   |   |
 | `allow_admin_mails` | [0, 1] |  |  |  |
 | `members_disable_pm` | [0, 1] |  |  |  |
@@ -55,10 +70,12 @@ This plugin must remain active in order for users' Invision passwords to continu
 | `pp_cover_photo` | file path below /uploads/ |  |  |  |
 | `bday_day`, `bday_month`, `bday_year` |  |  |  |  |
 | `members_profile_views` | int |  |  |  |
-| `pp_reputation_points` | int |  |  |  |
+| `pp_reputation_points` | int |  | http://www.rewweb.co.uk/bbp-user-ranking/ |  |
 | `signature` |  |  |  |  |
 
-IPB temporary bans (`temp_ban` unix time > 0) are lifted immediately. (could be implemented by cron)
+IPB temporary bans (`temp_ban` unix time > 0) are lifted immediately. (could be implemented by cron).
+
+Ban warnings.
 
 ### Forums
 
@@ -114,7 +131,7 @@ Step 14
 
 Need to distinguish between the url location of ipb uploads folder for importing, vs. where it was when live.
 
-
+uploads folder can be calculated from `SELECT * FROM ipbforum.core_file_storage;` `Filesystem` `{"dir":"{root}\/uploads","url":"uploads"}`
 
 Maybe problems if WordPress is not installed in root (/)... 
 
@@ -220,6 +237,176 @@ If [WP User Avatar](https://wordpress.org/plugins/wp-user-avatar/) plugin is act
 If the [WordPress Redirection plugin](https://wordpress.org/plugins/redirection/) is installed, this converter will add 404 redirects from old forum and topic URLs to the new bbPress posts.
 
 It does this by saving the `forums_forums.name_seo` and `forums_topics.title_seo` into WordPress post meta, and having an action on their save to use that data to build the old url, e.g. `/forum/6-forum-seo-name/`, and uses the Redirection REST API internally to add the entry pointing to `/?p=123`, so permalinks can be changed later, to a group named `bbPress`, then deletes the new meta key.
+
+## Invision v4 Schema
+
+| Table  | Purpose | Convereted |   |   |
+|---|---|---|---|---|
+| `calendar_calendars` |
+| `calendar_event_comments` |
+| `calendar_event_reminders` |
+| `calendar_event_reviews` |
+| `calendar_event_rsvp` |
+| `calendar_events` |
+| `calendar_import_feeds` |
+| `calendar_import_map` |
+| `calendar_venues` |
+| `convert_app_sessions` |
+| `convert_apps` |
+| `convert_bbcode_mediatag` |
+| `convert_custom_bbcode` |
+| `convert_link` |
+| `convert_link_pms` |
+| `convert_link_posts` |
+| `convert_link_topics` |
+| `convert_logs` |
+| `core_acp_search_index` |
+| `core_acp_tab_order` |
+| `core_acronyms` |
+| `core_admin_login_logs` |
+| `core_admin_logs` |
+| `core_admin_permission_rows` |
+| `core_advertisements` |
+| `core_announcements` |
+| `core_api_keys` |
+| `core_api_logs` |
+| `core_applications` |
+| `core_attachments` |
+| `core_attachments_map` |
+| `core_banfilters` |
+| `core_bulk_mail` |
+| `core_cache` |
+| `core_clubs` |
+| `core_clubs_fields` |
+| `core_clubs_fieldvalues` |
+| `core_clubs_memberships` |
+| `core_clubs_node_map` |
+| `core_content_meta` |
+| `core_deletion_log` |
+| `core_dev` |
+| `core_edit_history` |
+| `core_email_templates` |
+| `core_emoticons` |
+| `core_error_logs` |
+| `core_file_logs` |
+| `core_file_storage` |
+| `core_files` |
+| `core_files_temp` |
+| `core_follow` |
+| `core_geoip_cache` |
+| `core_googleauth_used_codes` |
+| `core_group_promotions` |
+| `core_groups` |
+| `core_hooks` |
+| `core_ignored_users` |
+| `core_image_proxy` |
+| `core_incoming_emails` |
+| `core_ipsconnect_queue` | Auth/SSO
+| `core_ipsconnect_slaves` | Auth/SSO
+| `core_item_markers` | Records which topics/posts/etc have been read by each user.
+| `core_javascript` |
+| `core_leaders` |
+| `core_leaders_groups` |
+| `core_log` |
+| `core_login_handlers` |
+| `core_mail_error_logs` |
+| `core_member_history` |
+| `core_member_ranks` |
+| `core_member_status_replies` |
+| `core_member_status_updates` |
+| `core_members` |
+| `core_members_feature_seen` |
+| `core_members_known_devices` |
+| `core_members_known_ip_addresses` |
+| `core_members_warn_actions` |
+| `core_members_warn_logs` |
+| `core_members_warn_reasons` |
+| `core_menu` |
+| `core_message_posts` |
+| `core_message_topic_user_map` |
+| `core_message_topics` |
+| `core_moderator_logs` |
+| `core_moderators` |
+| `core_modules` |
+| `core_notification_defaults` |
+| `core_notification_preferences` |
+| `core_notifications` |
+| `core_permission_index` |
+| `core_pfields_content` |
+| `core_pfields_data` |
+| `core_pfields_groups` |
+| `core_plugins` |
+| `core_polls` |
+| `core_profanity_filters` |
+| `core_profile_steps` |
+| `core_question_and_answer` |
+| `core_queue` |
+| `core_ratings` |
+| `core_rc_comments` |
+| `core_rc_index` |
+| `core_rc_reports` |
+| `core_reactions` |
+| `core_reputation_index` |
+| `core_reputation_leaderboard_history` |
+| `core_reputation_levels` |
+| `core_rss_export` |
+| `core_search_index` |
+| `core_search_index_item_map` |
+| `core_search_index_tags` |
+| `core_security_answers` |
+| `core_security_questions` |
+| `core_seo_meta` |
+| `core_sessions` |
+| `core_share_links` |
+| `core_sitemap` |
+| `core_social_promote` |
+| `core_social_promote_content` |
+| `core_social_promote_sharers` |
+| `core_soft_delete_log` |
+| `core_spam_service_log` |
+| `core_statistics` |
+| `core_store` |
+| `core_streams` |
+| `core_sys_conf_settings` |
+| `core_sys_cp_sessions` |
+| `core_sys_lang` |
+| `core_sys_lang_words` | Forum titles
+| `core_sys_social_group_members` |
+| `core_sys_social_groups` |
+| `core_tags` |
+| `core_tags_cache` |
+| `core_tags_perms` |
+| `core_tasks` |
+| `core_tasks_log` |
+| `core_theme_conflict` |
+| `core_theme_content_history` |
+| `core_theme_css` |
+| `core_theme_resources` |
+| `core_theme_settings_fields` |
+| `core_theme_settings_values` |
+| `core_theme_templates` |
+| `core_themes` |
+| `core_upgrade_history` |
+| `core_validating` |
+| `core_view_updates` |
+| `core_voters` |
+| `core_widget_areas` |
+| `core_widget_trash` |
+| `core_widgets` |
+| `forums_answer_ratings` |
+| `forums_archive_posts` |
+| `forums_archive_rules` |
+| `forums_forums` |
+| `forums_posts` |
+| `forums_question_ratings` |
+| `forums_rss_import` |
+| `forums_rss_imported` |
+| `forums_topic_mmod` |
+| `forums_topics` |
+| `forums_view_method` |
+| `masspm_messages`
+
+
 
 ## Acknowledgements
 
