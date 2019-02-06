@@ -9,18 +9,18 @@ Tested converting from Invision Community 4.3.6 to [bbPress 2.6-rc-7](https://bb
 * (optional) Install and activate [Redirection](https://wordpress.org/plugins/redirection/) plugin to ensure old links continue to work.
 * (optional) Install and activate and [WP User Avatar](https://wordpress.org/plugins/wp-user-avatar/) plugin.
 
-1. Edit `bbPress-Invision-v4-Converter.php` line 13 to add the source server uploads url for file import. If the old forum is offline, copy its uploads folder somewhere http accessible and use that path.
-2. Install the plugin files into `wp-content/plugins/bbPress-Invision-v4-Converter/` and activate.
-3. Navigate to WordPress Admin Dashboard / Tools / Forums / Import Forums (at `wp-admin/tools.php?page=bbp-converter`).
-4. Fill in the source database details and hit `Start`.
-5. Manually set your forum titles and descriptions.
+1. Install the plugin files into `wp-content/plugins/bbPress-Invision-v4-Converter/` and activate.
+4. Navigate to WordPress Admin Dashboard / Tools / Forums / Import Forums (at `wp-admin/tools.php?page=bbp-converter`).
+4. Fill in the source database details as usual with every bbPress converter.
+5. Fill in the `Original Invision Forum URL` and `Invision Files Source URL`.
+6. Press Start. (and be patient).
 
 This plugin must remain active in order for users' Invision passwords to continue to work with WordPress (each user needs to log in once for the password to be saved natively).
 
 ## Completed
 
 * Users: passwords, roles, avatars (if [WP User Avatar](https://wordpress.org/plugins/wp-user-avatar/) active), banning.
-* Forums: importing*.
+* Forums: importing.
 * Topics: importing, unapproving, closing.
 * Super-stickies (announcements): importing, unapproving.
 * Replies: importing, unapproving, emoticons, images.
@@ -29,16 +29,19 @@ This plugin must remain active in order for users' Invision passwords to continu
 
 ## TODO
 
-* Users: meta-data (social accounts...).
-* Forums: titles, descriptions.
-* Topics: unapproving reasons
-* Favorites
-* Subscriptions
+* Users: meta-data (social accounts...), old user profile URL redirects*.
+* Topics: unapproving reasons.
+* Favorites.
+* Subscriptions.
 * Redirection: urls with trailing slashes don't redirect, .jpg doesn't redirect.
-* Images/Attachments import config UI.
+* Forums reset:(media files remain and redirects remain).
 
 
-Forums reset doesn't work... i.e. media files remain and redirects remain. Redirects can be deleted in a single click. Imported attachments are marked `_bbp_attachment`.
+
+
+
+
+. Redirects can be deleted in a single click. Imported attachments are marked `_bbp_attachment`. No action seems to be called during the bbPress reset function.
 
 
 Use wp-cli to text search for hyperlinks and see if there are any weird ones remaining (see `convert_link...` tables).
@@ -56,6 +59,7 @@ User stats on user page not correct, but replies etc do list. (need to run anoth
 https://forum-staging.gv1md4q4-liquidwebsites.com/forums/topic/ 
 Redirects to:
 https://forum-staging.gv1md4q4-liquidwebsites.com/forums/topic/topical-dnp/
+(seems to be 
 
 ### Users
 
@@ -80,24 +84,6 @@ https://forum-staging.gv1md4q4-liquidwebsites.com/forums/topic/topical-dnp/
 IPB temporary bans (`temp_ban` unix time > 0) are lifted immediately. (could be implemented by cron).
 
 Ban warnings.
-
-### Forums
-
-#### Titles
-
-Forum titles are stored in the `core_sys_lang_words` table with the forum number concatenated into a string, e.g. `forums_forum_1`, SQL: `SELECT word_default FROM ipbforum.core_sys_lang_words WHERE word_app = 'forums' AND word_key = 'forums_forum_1'`
-
-`SELECT CONCAT(prefix, id) as concat FROM (SELECT 'forums_forum_' as prefix, ipbforum.forums_forums.id FROM ipbforum.forums_forums) AS t`
-
-`SELECT word_default FROM ipbforum.core_sys_lang_words WHERE word_app = 'forums' AND word_key = CONCAT('forums_forum_', 1)`
-
-For now, the forum slug, which is built from the forum name, is being used.
-
-#### Desciptions
-
-Forum descriptions are stored in the `core_sys_lang_words` table with the forum number concatenated into a string, e.g. `forums_forum_1_desc`, SQL: `SELECT word_default FROM ipbforum.core_sys_lang_words WHERE word_app = 'forums' AND word_key = 'forums_forum_1_desc'`
-
-HTML then needs to be stripped from this value.
 
 ### Topics
 
@@ -129,8 +115,6 @@ Step 13
 
 Step 14
 
-
- 
 ### Images/Attachments Source/UI
 
 Need to distinguish between the url location of ipb uploads folder for importing, vs. where it was when live.
