@@ -32,7 +32,7 @@ function bbp_converter_setting_callback_files_source() {
 	?>
 
 	<input name="_bbp_converter_files_source" id="_bbp_converter_files_source" type="text" class="code" value="<?php bbp_form_option( '_bbp_converter_files_source', '' ); ?>" <?php bbp_maybe_admin_setting_disabled( '_bbp_converter_files_source' ); ?> />
-	<p class="description"><?php printf( esc_html__( 'Maybe %s, can be any http accessible location of Invisions /uploads/ folder. ', 'bbpress' ), '<code>http://oldforum.url/uploads/</code>' ); ?></p>
+	<p class="description"><?php printf( esc_html__( 'Maybe %s, can be any http accessible location of Invision\'s /uploads/ folder. ', 'bbpress' ), '<code>http://oldforum.url/uploads/</code>' ); ?></p>
 
 	<?php
 }

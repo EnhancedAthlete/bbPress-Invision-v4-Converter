@@ -28,6 +28,11 @@ class InvisionV4 extends BBP_Converter_Base {
 	 */
 	private $bbpress_relative_url_path;
 
+	/**
+	 * The Redirection plugin will create or use a group by this name.
+	 *
+	 * @var string
+	 */
 	private $redirection_group_name = 'bbPress';
 	private $redirection_group_id = null;
 
@@ -65,6 +70,13 @@ class InvisionV4 extends BBP_Converter_Base {
 	 * @var string
 	 */
 	private $uploads_folder_path = 'uploads/';
+
+	/**
+	 * Filesystem path to this WordPress install's `wp-content/uploads/` folder.
+	 * With a trailing slash.
+	 *
+	 * @var string
+	 */
 	private $wp_uploads_dir_path;
 
 	// begins with /
@@ -222,7 +234,7 @@ class InvisionV4 extends BBP_Converter_Base {
 			return;
 		}
 
-		/** @var int $wpdb */
+		/** @var int $blog_id */
 		global $blog_id;
 
 		/** @var wpdb $wpdb */
@@ -1292,8 +1304,6 @@ class InvisionV4 extends BBP_Converter_Base {
 
 	public function set_forum_titles_descriptions() {
 
-		error_log(json_encode($this->map_forumid));
-
 		/** @var wpdb $opdb */
 		$opdb = $this->opdb;
 
@@ -1317,8 +1327,6 @@ class InvisionV4 extends BBP_Converter_Base {
 
 				if( isset($output_array[2]) && $output_array[2] == 'desc' ) {
 					$forum_description = $string_row['word_default'];
-
-					error_log( $invision_forum_id . ' ' . $forum_description );
 
 					wp_update_post( array (
 						'ID' => $bbp_forum_id,
@@ -1553,9 +1561,9 @@ class InvisionV4 extends BBP_Converter_Base {
 
 		// Update attachment links to relative URLs
 		// The files themselves will be imported later and redirections set up
-		// href="<fileStore.core_Attachment>/monthly_2017_09/Screenshot_20170910-152038.png.6f296e278cac3bc3d100c7c1e47a05d4.png"
-		// TODO: the explicit "/uploads" here is liable to become incorrect
-		$invision_markup = str_replace( "<fileStore.core_Attachment>", '/uploads', $invision_markup );
+		//
+		// An IPBv3 post URL: <fileStore.core_Attachment>/monthly_2017_09/Screenshot_20170910-152038.png.6f296e278cac3bc3d100c7c1e47a05d4.png
+		$invision_markup = str_replace( "<fileStore.core_Attachment>/", '/' . $this->uploads_folder_path, $invision_markup );
 
 		// iFrame embeds
 		$invision_markup = str_replace( "<___base_url___>/index.php?app=core&module=system&controller=embed&url=", '', $invision_markup );
