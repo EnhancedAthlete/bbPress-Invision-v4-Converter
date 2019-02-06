@@ -37,7 +37,10 @@ This plugin must remain active in order for users' Invision passwords to continu
 * Forums reset:(media files remain and redirects remain).
 
 
+Favorites: `core_follow` table
 
+
+`core_deletion_log` maybe not addressed, thus undeleting topics
 
 
 
@@ -228,9 +231,13 @@ It does this by saving the `forums_forums.name_seo` and `forums_topics.title_seo
 
 ## Invision v4 Schema
 
-| Table  | Purpose | Convereted |   |   |
+Beyond what has been addressed by this plugin, further data and functionality in Invision remains to be addressed. Much of it is not directly applicable to bbPress, and much of what may be relevant to you was not to me. NA = Not Directly Applicable to bbPress. 
+
+Here are _some_ notes on what I know:
+
+| Table  | Purpose | Convereted | Notes | In my case |
 |---|---|---|---|---|
-| `calendar_calendars` |
+| `calendar_calendars` | | NA
 | `calendar_event_comments` |
 | `calendar_event_reminders` |
 | `calendar_event_reviews` |
@@ -239,7 +246,7 @@ It does this by saving the `forums_forums.name_seo` and `forums_topics.title_seo
 | `calendar_import_feeds` |
 | `calendar_import_map` |
 | `calendar_venues` |
-| `convert_app_sessions` |
+| `convert_app_sessions` | Seems to be related to importing TO Invision. | NA
 | `convert_apps` |
 | `convert_bbcode_mediatag` |
 | `convert_custom_bbcode` |
@@ -248,120 +255,120 @@ It does this by saving the `forums_forums.name_seo` and `forums_topics.title_seo
 | `convert_link_posts` |
 | `convert_link_topics` |
 | `convert_logs` |
-| `core_acp_search_index` |
+| `core_acp_search_index` | ACP = Admin Control Panel | NA 
 | `core_acp_tab_order` |
 | `core_acronyms` |
 | `core_admin_login_logs` |
-| `core_admin_logs` |
+| `core_admin_logs` | Logs – might be useful to add as metadata to users and topics.
 | `core_admin_permission_rows` |
-| `core_advertisements` |
-| `core_announcements` |
+| `core_advertisements` | NA
+| `core_announcements` | Imported as Super Stickies.
 | `core_api_keys` |
 | `core_api_logs` |
-| `core_applications` |
-| `core_attachments` |
-| `core_attachments_map` |
-| `core_banfilters` |
-| `core_bulk_mail` |
-| `core_cache` |
-| `core_clubs` |
+| `core_applications` | List of Invision plugins.
+| `core_attachments` | | Forums attachments imported to Media Library | `WHERE core_attachments_map.location_key = "forums_Forums"`
+| `core_attachments_map` | 
+| `core_banfilters` | | | | empty
+| `core_bulk_mail` | maybe the table of an add-on of ours
+| `core_cache` | | NA | | empty
+| `core_clubs` | | NA | BuddyPress relevant? | empty
 | `core_clubs_fields` |
 | `core_clubs_fieldvalues` |
 | `core_clubs_memberships` |
 | `core_clubs_node_map` |
-| `core_content_meta` |
-| `core_deletion_log` |
-| `core_dev` |
-| `core_edit_history` |
-| `core_email_templates` |
-| `core_emoticons` |
-| `core_error_logs` |
-| `core_file_logs` |
-| `core_file_storage` |
-| `core_files` |
-| `core_files_temp` |
-| `core_follow` |
-| `core_geoip_cache` |
-| `core_googleauth_used_codes` |
-| `core_group_promotions` |
-| `core_groups` |
+| `core_content_meta` | | | | empty
+| `core_deletion_log` | | | **Maybe important** are topics marked deleted here accounted for elsewhere?
+| `core_dev` | | | | empty
+| `core_edit_history` | | | | empty
+| `core_email_templates` | | | BuddyPress relevant?
+| `core_emoticons` | | emoticons were imported when their direct URL was seen. Maybe a more thorough way would've been to use this table, to also add users' ability to use their familiar typed code :P 
+| `core_error_logs` | | | | empty
+| `core_file_logs` | Seems maybe to be deletion logs
+| `core_file_storage` | A single entry specifying the uploads directory, both path and URL.
+| `core_files` | | | | empty
+| `core_files_temp` | | | | empty
+| `core_follow` | | **TODO** | also applicable to BuddyPress
+| `core_geoip_cache` | | | | empty
+| `core_googleauth_used_codes` | | | | empty
+| `core_group_promotions` | | | | empty
+| `core_groups` | admin/member/mod groups | Imported, but assumed default Invision settings, and only for default bbPress groups.
 | `core_hooks` |
-| `core_ignored_users` |
-| `core_image_proxy` |
-| `core_incoming_emails` |
+| `core_ignored_users` | | NA | would need a bbPress plugin | empty
+| `core_image_proxy` | | | | empty
+| `core_incoming_emails` | | | | empty
 | `core_ipsconnect_queue` | Auth/SSO
 | `core_ipsconnect_slaves` | Auth/SSO
-| `core_item_markers` | Records which topics/posts/etc have been read by each user.
-| `core_javascript` |
-| `core_leaders` |
+| `core_item_markers` | Records which topics/posts/etc have been read by each user. | | would need a bbPress plugin
+| `core_javascript` | .js files stored in DB
+| `core_leaders` | ??
 | `core_leaders_groups` |
 | `core_log` |
-| `core_login_handlers` |
-| `core_mail_error_logs` |
+| `core_login_handlers` | | NA | worth looking at to decide what WordPress plugins are needed
+| `core_mail_error_logs` | | | | empty
 | `core_member_history` |
-| `core_member_ranks` |
-| `core_member_status_replies` |
-| `core_member_status_updates` |
-| `core_members` |
+| `core_member_ranks` | | | | empty
+| `core_member_status_replies` | | BuddyPress relevant?
+| `core_member_status_updates` | | BuddyPress relevant?
+| `core_members` | | Converted to `WP_User`s. Not all data converted.
 | `core_members_feature_seen` |
 | `core_members_known_devices` |
 | `core_members_known_ip_addresses` |
-| `core_members_warn_actions` |
+| `core_members_warn_actions` | |
 | `core_members_warn_logs` |
 | `core_members_warn_reasons` |
 | `core_menu` |
-| `core_message_posts` |
+| `core_message_posts` | Private messages | NA / BuddyPress relevant
 | `core_message_topic_user_map` |
 | `core_message_topics` |
 | `core_moderator_logs` |
 | `core_moderators` |
-| `core_modules` |
-| `core_notification_defaults` |
-| `core_notification_preferences` |
+| `core_modules` | | | Worth looking at for plugins needed.
+| `core_notification_defaults` | System notificaion settings
+| `core_notification_preferences` | Individual notification settings (beyond system set)
 | `core_notifications` |
 | `core_permission_index` |
 | `core_pfields_content` |
 | `core_pfields_data` |
 | `core_pfields_groups` |
-| `core_plugins` |
-| `core_polls` |
-| `core_profanity_filters` |
-| `core_profile_steps` |
+| `core_plugins` | | | surprisingly empty | empty
+| `core_polls` | | | | empty
+| `core_profanity_filters` | | | | empty
+| `core_profile_steps` | | | | empty
 | `core_question_and_answer` |
-| `core_queue` |
-| `core_ratings` |
-| `core_rc_comments` |
+| `core_queue` | | | | empty
+| `core_ratings` | | | | empty
+| `core_rc_comments` | | | "Updated the status of the report to Complete"
 | `core_rc_index` |
 | `core_rc_reports` |
-| `core_reactions` |
+| `core_reactions` | Reactions similar to Facebook's Like, Angry, Laughing... | 
 | `core_reputation_index` |
 | `core_reputation_leaderboard_history` |
 | `core_reputation_levels` |
 | `core_rss_export` |
-| `core_search_index` |
+| `core_search_index` | seems to cut out irrelevant words for content to make search more efficient | NA
 | `core_search_index_item_map` |
 | `core_search_index_tags` |
-| `core_security_answers` |
+| `core_security_answers` | Hashed set of answers.
 | `core_security_questions` |
-| `core_seo_meta` |
+| `core_seo_meta` | | | | empty
 | `core_sessions` |
 | `core_share_links` |
 | `core_sitemap` |
-| `core_social_promote` |
-| `core_social_promote_content` |
+| `core_social_promote` | | | | empty
+| `core_social_promote_content` | | | | empty
 | `core_social_promote_sharers` |
-| `core_soft_delete_log` |
-| `core_spam_service_log` |
-| `core_statistics` |
+| `core_soft_delete_log` | **NOT addressed in posts**
+| `core_spam_service_log` | | | | empty
+| `core_statistics` | Daily analytics?
 | `core_store` |
 | `core_streams` |
-| `core_sys_conf_settings` |
-| `core_sys_cp_sessions` |
+| `core_sys_conf_settings` | settings, e.g. forums_topics_per_page | **NOT imported** 
+| `core_sys_cp_sessions` | | | | empty
 | `core_sys_lang` |
-| `core_sys_lang_words` | Forum titles
-| `core_sys_social_group_members` |
-| `core_sys_social_groups` |
-| `core_tags` |
+| `core_sys_lang_words` | Public facing terminology | Imported only for forum titles
+| `core_sys_social_group_members` | | | | empty
+| `core_sys_social_groups` | | | | empty
+| `core_tags` | | Imported but **uncertain** – it seems to have worked.
 | `core_tags_cache` |
 | `core_tags_perms` |
 | `core_tasks` |
@@ -381,20 +388,18 @@ It does this by saving the `forums_forums.name_seo` and `forums_topics.title_seo
 | `core_widget_areas` |
 | `core_widget_trash` |
 | `core_widgets` |
-| `forums_answer_ratings` |
-| `forums_archive_posts` |
+| `forums_answer_ratings` | | Plugin required
+| `forums_archive_posts` | | | | empty
 | `forums_archive_rules` |
-| `forums_forums` |
-| `forums_posts` |
+| `forums_forums` | The forums themselves | Imported. Position not imported. I password protected, not addressed. ....
+| `forums_posts` | | probably mostly imported
 | `forums_question_ratings` |
-| `forums_rss_import` |
-| `forums_rss_imported` |
-| `forums_topic_mmod` |
-| `forums_topics` |
+| `forums_rss_import` | | | | empty
+| `forums_rss_imported` | | | | empty
+| `forums_topic_mmod` | | | | empty
+| `forums_topics` | | Mostly imported. Views not imported.
 | `forums_view_method` |
 | `masspm_messages`
-
-
 
 ## Acknowledgements
 
