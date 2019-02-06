@@ -1274,6 +1274,8 @@ class InvisionV4 extends BBP_Converter_Base {
 
 		$success = parent::convert_reply_to_parents( $start );
 
+		$this->set_forum_titles_descriptions();
+
 		require_once ( get_home_path() . '/wp-content/plugins/bbpress/includes/admin/tools/repair.php' );
 
 		// Forum Last Posts were appearing as "No Topics"
@@ -1285,6 +1287,54 @@ class InvisionV4 extends BBP_Converter_Base {
 		$this->calculateSetReturnForumDateFromOldestPost();
 
 		return $success;
+	}
+
+
+	public function set_forum_titles_descriptions() {
+
+		error_log(json_encode($this->map_forumid));
+
+		/** @var wpdb $opdb */
+		$opdb = $this->opdb;
+
+		$forum_strings_query = "SELECT word_key, word_default FROM {$this->opdb->prefix}core_sys_lang_words WHERE word_key REGEXP '^forums_forum_[0-9]*(_desc)?$'";
+
+		// Get results as an array
+		$forum_strings = $opdb->get_results( $forum_strings_query, ARRAY_A );
+
+		foreach ( (array) $forum_strings as $string_row ) {
+
+			$output_array = array();
+
+			if( preg_match('/^forums_forum_([0-9]+)(?>_(desc))?$/', $string_row['word_key'], $output_array) ) {
+
+				$invision_forum_id = $output_array[1];
+
+				$bbp_forum_id_row = $this->wpdb->get_row( $this->wpdb->prepare( "SELECT value_id, meta_value FROM {$this->sync_table_name} WHERE meta_key = %s AND meta_value = %s LIMIT 1", '_bbp_old_forum_id', $invision_forum_id ) );
+
+				$bbp_forum_id  = $bbp_forum_id_row->value_id;
+
+
+				if( isset($output_array[2]) && $output_array[2] == 'desc' ) {
+					$forum_description = $string_row['word_default'];
+
+					error_log( $invision_forum_id . ' ' . $forum_description );
+
+					wp_update_post( array (
+						'ID' => $bbp_forum_id,
+						'post_content' => $forum_description
+					));
+
+				} else {
+					$forum_title = $string_row['word_default'];
+
+					wp_update_post( array(
+						'ID'         => $bbp_forum_id,
+						'post_title' => $forum_title
+					) );
+				}
+			}
+		}
 	}
 
 	/**
