@@ -21,16 +21,50 @@ class InvisionV4 extends BBP_Converter_Base {
 
 	private $rest_server;
 
-	private $forums_relative_url;
+	/**
+	 * Is bbPress/WordPress installed in a subdirectory?
+	 *
+	 * @var string
+	 */
+	private $bbpress_relative_url_path;
 
 	private $redirection_group_name = 'bbPress';
 	private $redirection_group_id = null;
 
 	private $wp_user_avatar_user_meta_key = null;
 
-	private $ipb_uploads_url;
+	/**
+	 * A http accessible location of the Invision uploads folder.
+	 * If the forum is still online, it's probably $original_forum_url/uploads.
+	 *
+	 * With a trailing slash.
+	 *
+	 * https://anywebserver.online/old_uploads_contents_folder/
+	 *
+	 * @var string
+	 */
+	private $invision_uploads_source_url;
 
-	// No trailing slashes
+	/**
+	 * The url to the old forums, comes into play when they were installed to a subdirectory,
+	 * particularly when creating redirects.
+	 *
+	 * With a trailing slash.
+	 *
+	 * @var string
+	 */
+	private $invision_forum_url;
+
+	/**
+	 * Unimplemented, but should be calculated from:
+	 *
+	 * `SELECT * FROM core_file_storage;`
+	 *
+	 * `Filesystem` `{"dir":"{root}\/uploads","url":"uploads"}`
+	 *
+	 * @var string
+	 */
+	private $uploads_folder_path = 'uploads/';
 	private $wp_uploads_dir_path;
 
 	// begins with /
@@ -39,7 +73,7 @@ class InvisionV4 extends BBP_Converter_Base {
 	private $wp_emoticons_dir_path;
 	private $wp_emoticons_url_path;
 
-	private $ipb_emoticons_url;
+	private $invision_emoticons_url;
 
 	/**
 	 * Main Constructor
@@ -69,36 +103,61 @@ class InvisionV4 extends BBP_Converter_Base {
 	}
 
 	/**
-	 * Adding trailing slash to all paths
+	 * The bbPress converter at `wp-admin/tools.php?page=bbp-converter` has had two fields
+	 * added to it:
+	 *
+	 * Original Invision Forum URL
+	 * Invision Files Source URL
+	 *
+	 * This function also calculates the current install location of bbPress/WP for redirection links
+	 * It adds a trailing slash to all paths.
 	 */
 	private function configureUploadsPaths() {
 
-		$wordpress_install_url = get_option('home');
-		$wordpress_install_url = trailingslashit($wordpress_install_url);
+		$bbp_converter_files_source = ! empty( $_POST['_bbp_converter_files_source'] )
+			? sanitize_text_field( $_POST['_bbp_converter_files_source'] )
+			: null;
+
+		$bbp_converter_files_source = trailingslashit( $bbp_converter_files_source );
+
+		update_option( '_bbp_converter_files_source', $bbp_converter_files_source );
+
+		// Where do I calculate the IPB3 site root? (I think that's what this should be for)
+		$bbp_converter_original_forum_url = ! empty( $_POST['_bbp_converter_original_forum_url'] )
+			? sanitize_text_field( $_POST['_bbp_converter_original_forum_url'] )
+			: null;
+
+		$bbp_converter_original_forum_url = trailingslashit( $bbp_converter_original_forum_url );
+
+		update_option( '_bbp_converter_original_forum_url', $bbp_converter_original_forum_url );
+
+		$this->invision_forum_url = $bbp_converter_original_forum_url;
+
+		$bbpress_wp_install_url = get_option('home'); // https://bbpressinstall.url
+		$bbpress_wp_install_url = trailingslashit($bbpress_wp_install_url);
 
 		$forums_root = get_option( '_bbp_root_slug');
-		$forums_url = $wordpress_install_url . $forums_root;
+		$forums_url = $bbpress_wp_install_url . $forums_root;
 
-		$url = wp_parse_url($forums_url);
-		$this->forums_relative_url = trailingslashit( $url['path'] );
+		$url                             = wp_parse_url($forums_url);
+		$this->bbpress_relative_url_path = trailingslashit( $url['path'] );
 
-		$this->ipb_uploads_url = trailingslashit( get_option( 'bbpress_converter_ipb_uploads_url' ) );
+		$this->invision_uploads_source_url = trailingslashit( $bbp_converter_files_source );
 
-		$upload_dir      = wp_upload_dir();
+		$wp_upload_dir = wp_upload_dir();
 
-		$this->wp_uploads_dir_path = trailingslashit( $upload_dir['basedir'] );
+		$this->wp_uploads_dir_path = trailingslashit( $wp_upload_dir['basedir'] );
 
-		$this->wp_uploads_url_path = str_replace( get_site_url(), '', $upload_dir['baseurl'] . '/' );
+		$this->wp_uploads_url_path = trailingslashit( str_replace( get_site_url(), '', $wp_upload_dir['baseurl'] ) );
 
-		$wp_emoticons_dir_path = $this->wp_uploads_dir_path . 'ipb_emoticons/';
+		$wp_emoticons_dir_path = $this->wp_uploads_dir_path . 'invision_emoticons/';
 		wp_mkdir_p( $wp_emoticons_dir_path );
 		$this->wp_emoticons_dir_path = $wp_emoticons_dir_path;
 
-		$this->wp_emoticons_url_path = $this->wp_uploads_url_path . 'ipb_emoticons/';
-
-		$this->ipb_emoticons_url = $this->ipb_uploads_url . 'emoticons/';
-
+		$this->invision_emoticons_url = $this->invision_uploads_source_url . 'emoticons/';
+		$this->wp_emoticons_url_path = $this->wp_uploads_url_path . 'invision_emoticons/';
 	}
+
 	/**
 	 * The WordPress Redirection plugin can be used to avoid 404 links for users
 	 *
@@ -1059,7 +1118,7 @@ class InvisionV4 extends BBP_Converter_Base {
 	}
 
 	/**
-	 * Import attachments.
+	 * Import attachments. // TODO: Move the work into an appropriately named function
 	 *
 	 * In testing, there never were any anonymous reply authors. This function is being overridden for importing
 	 * attachments.
@@ -1069,6 +1128,7 @@ class InvisionV4 extends BBP_Converter_Base {
 	 * @return bool
 	 */
 	public function convert_anonymous_reply_authors( $start = 1 ) {
+		// public function import_attachments
 
 		register_post_type( InvisionV4::ATTACHMENT_POST_TYPE );
 
@@ -1085,21 +1145,23 @@ class InvisionV4 extends BBP_Converter_Base {
 		// Download them and add them to the media library
 		foreach( $new_posts as $attachment_post ) {
 
-			$ipb_attachment_id          = $attachment_post->menu_order;
+			$invision_attachment_id     = $attachment_post->menu_order;
 			$filename                   = $attachment_post->post_title;
 			$file_ext                   = $attachment_post->post_mime_type;
 
-			// https://forum.enhancedathlete.com/uploads/monthly_2016_08/IMG_20160818.jpg.6873547ba2dc84ed4b08c362ae2657c7.jpg
-			$ipb_attachment_direct_url  = $this->ipb_uploads_url . $attachment_post->post_content;
+			// The http location of the file to import
+			$invision_uploads_attachment_direct_url = $this->invision_uploads_source_url . $attachment_post->post_content;
 
+			// The old direct file relative URL
 			// /uploads/monthly_2016_08/IMG_20160818.jpg.6873547ba2dc84ed4b08c362ae2657c7.jpg
-			$ipb_attachment_direct_url_relative =  wp_parse_url( $ipb_attachment_direct_url )[ 'path' ];
+			$invision_attachment_direct_url  = $this->invision_forum_url . $this->uploads_folder_path . $attachment_post->post_content;
+			$invision_attachment_direct_url_relative = wp_parse_url( $invision_attachment_direct_url )[ 'path' ];
 
-			// https://forum.enhancedathlete.com/uploads/applications/core/interface/file/attachment.php?id=839
-			$ipb_attachment_php_url     = $this->ipb_uploads_url . 'applications/core/interface/file/attachment.php?id=' . $ipb_attachment_id;
-
+			// The old attachments.php? file service attachment url
+			// https://forum.enhancedathlete.com/applications/core/interface/file/attachment.php?id=839
+			$invision_attachment_php_url     = $this->invision_forum_url . 'applications/core/interface/file/attachment.php?id=' . $invision_attachment_id;
 			// /uploads/applications/core/interface/file/attachment.php?id=839
-			$ipb_attachment_php_url_relative = wp_parse_url( $ipb_attachment_php_url )[ 'path' ];
+			$invision_attachment_php_url_relative = wp_parse_url( $invision_attachment_php_url )[ 'path' ];
 
 			$attachment_user_id         = $attachment_post->post_author;
 			$attachment_date            = $attachment_post->post_date;
@@ -1113,11 +1175,11 @@ class InvisionV4 extends BBP_Converter_Base {
 				$upload_folder = $year_month_array[1] . '/' . $year_month_array[2];
 			}
 
-			$wp_attachment_id = $this->upload_to_media_library( $ipb_attachment_direct_url, $upload_folder, $parent_post_id, $attachment_date, $file_ext, $filename );
+			$wp_attachment_id = $this->upload_to_media_library( $invision_uploads_attachment_direct_url, $upload_folder, $parent_post_id, $attachment_date, $file_ext, $filename );
 
 			if( is_wp_error( $wp_attachment_id ) ) {
 				// The file did not upload successfully
-				error_log( 'ipb attachment: ' . $ipb_attachment_id . ', wp user: ' . $attachment_user_id . ', wp parent post: ' . $parent_post_id );
+				error_log( 'ipb attachment: ' . $invision_attachment_id . ', wp user: ' . $attachment_user_id . ', wp parent post: ' . $parent_post_id );
 				wp_delete_post( $attachment_post->ID );
 				continue;
 			}
@@ -1139,8 +1201,8 @@ class InvisionV4 extends BBP_Converter_Base {
 			// /wp-content/uploads/2019/01/asd.jpg
 			$new_attachment_url_relative = wp_parse_url( $new_attachment_url )[ 'path' ];
 
-			$this->create_redirect_to_local_url( $ipb_attachment_php_url_relative,    $new_attachment_url_relative );
-			$this->create_redirect_to_local_url( $ipb_attachment_direct_url_relative, $new_attachment_url_relative );
+			$this->create_redirect_to_local_url( $invision_attachment_php_url_relative,    $new_attachment_url_relative );
+			$this->create_redirect_to_local_url( $invision_attachment_direct_url_relative, $new_attachment_url_relative );
 
 
 			// Update the URL used in the post itself
@@ -1157,19 +1219,19 @@ class InvisionV4 extends BBP_Converter_Base {
 
 			$post_content = $parent_post->post_content;
 
-			$post_content = str_replace( $ipb_attachment_php_url_relative, $new_attachment_url_relative, $post_content );
-			$post_content = str_replace( $ipb_attachment_direct_url_relative, $new_attachment_url_relative, $post_content );
+			$post_content = str_replace( $invision_attachment_php_url_relative, $new_attachment_url_relative, $post_content );
+			$post_content = str_replace( $invision_attachment_direct_url_relative, $new_attachment_url_relative, $post_content );
 
 			// Update the thumbnail
 			// <a class="ipsAttachLink ipsAttachLink_image" href="<fileStore.core_Attachment>/monthly_2017_09/Screenshot_20170910-152038.png.6f296e278cac3bc3d100c7c1e47a05d4.png" data-fileid="1633" rel=""><img class="ipsImage ipsImage_thumbnailed" data-fileid="1633" src="<fileStore.core_Attachment>/monthly_2017_09/Screenshot_20170910-152038.thumb.png.10c5324e28bcb06995193ac45425f4fa.png" alt="Screenshot_20170910-152038.thumb.png.10c5324e28bcb06995193ac45425f4fa.png" /></a>
-
+			// <fileStore.core_Attachment> was replaced with /uploads already
 			// /monthly_2017_09/Screenshot_20170910-152038.thumb.png.10c5324e28bcb06995193ac45425f4fa.png
 			$ipb_thumbnail = get_post_meta( $attachment_post->ID, '_attachment_thumbnail_location', true );
 
 			if( !empty( $ipb_thumbnail ) ) {
 
 				// https://forum.enhancedathlete.com/uploads/monthly_2017_09/Screenshot_20170910-152038.thumb.png.10c5324e28bcb06995193ac45425f4fa.png
-				$ipb_thumbnail_url = $this->ipb_uploads_url . $ipb_thumbnail;
+				$ipb_thumbnail_url = $this->invision_uploads_source_url . $ipb_thumbnail;
 
 				// /uploads/monthly_2017_09/Screenshot_20170910-152038.thumb.png.10c5324e28bcb06995193ac45425f4fa.png
 				$ipb_thumbnail_url_path = wp_parse_url( $ipb_thumbnail_url )[ 'path' ];
@@ -1480,7 +1542,7 @@ class InvisionV4 extends BBP_Converter_Base {
 
 			foreach( $output_array[0] as $index => $anchor ) {
 
-				$bbpress_user_url = $this->forums_relative_url . 'users/' . $output_array[1][$index];
+				$bbpress_user_url = $this->bbpress_relative_url_path . 'users/' . $output_array[1][$index];
 
 				$bbpress_user_anchor = '<a href="' . $bbpress_user_url . '">';
 
@@ -1497,7 +1559,7 @@ class InvisionV4 extends BBP_Converter_Base {
 
 			foreach( $output_array[0] as $index => $anchor ) {
 
-				$bbpress_user_url = $this->forums_relative_url . 'users/' . $output_array[1][$index];
+				$bbpress_user_url = $this->bbpress_relative_url_path . 'users/' . $output_array[1][$index];
 
 				$invision_markup = str_replace( $anchor, $bbpress_user_url, $invision_markup );
 
@@ -1520,7 +1582,7 @@ class InvisionV4 extends BBP_Converter_Base {
 	 */
 	private function invision_emoticons( $invision_markup ) {
 
-		if ( null == $this->ipb_uploads_url ) {
+		if ( null == $this->invision_uploads_source_url ) {
 			return $invision_markup;
 		}
 
@@ -1534,7 +1596,7 @@ class InvisionV4 extends BBP_Converter_Base {
 
 				$local_file = $this->wp_emoticons_dir_path . $output_array[1][$key];
 				if( !file_exists( $local_file ) ) {
-					$remote_file = $this->ipb_emoticons_url . $output_array[1][$key];
+					$remote_file = $this->invision_emoticons_url . $output_array[1][$key];
 					if( !@copy( $remote_file, $local_file ) ) {
 						error_log( "Remote emoticon not found: " . $remote_file );
 					}
@@ -1542,7 +1604,7 @@ class InvisionV4 extends BBP_Converter_Base {
 
 				$local_file = $this->wp_emoticons_dir_path . $output_array[2][$key];
 				if( !file_exists( $local_file ) ) {
-					$remote_file = $this->ipb_emoticons_url . $output_array[2][$key];
+					$remote_file = $this->invision_emoticons_url . $output_array[2][$key];
 					if( !@copy( $remote_file, $local_file ) ) {
 						error_log( "Remote emoticon not found: " . $remote_file );
 					}
@@ -1564,7 +1626,7 @@ class InvisionV4 extends BBP_Converter_Base {
 				$emoticon = str_replace(' 2x', '', $emoticon );
 				$local_file = $this->wp_uploads_dir_path . $emoticon;
 				if ( ! file_exists( $local_file ) ) {
-					$remote_file = $this->ipb_emoticons_url . $emoticon;
+					$remote_file = $this->invision_emoticons_url . $emoticon;
 					if( !@copy( $remote_file, $local_file ) ) {
 						error_log( "Remote emoticon not found: " . $remote_file );
 					}
@@ -1621,7 +1683,7 @@ class InvisionV4 extends BBP_Converter_Base {
 
 		$post_content = $post->post_content;
 
-		// By this stage /uploads/emoticions should have been addressed
+		// By this stage /uploads/emoticons should have been addressed
 
 		// sample string <img src="<___base_url___>/uploads/editor/tk/74fbai1mvij3.jpg" alt="74fbai1mvij3.jpg" /></p>
 		// has already been parsed above to
@@ -1638,7 +1700,7 @@ class InvisionV4 extends BBP_Converter_Base {
 
 			foreach ( $output_array[1] as $key => $remote_path_name ) {
 
-				$remote_file_url = $this->ipb_uploads_url . $remote_path_name;
+				$remote_file_url = $this->invision_uploads_source_url . $remote_path_name;
 
 				$attachment_id = $this->upload_to_media_library( $remote_file_url, $wp_uploads_subdir, $post->ID, $post->post_date );
 
@@ -1799,7 +1861,7 @@ class InvisionV4 extends BBP_Converter_Base {
 			return;
 		}
 
-		$url = $this->ipb_uploads_url . $_meta_value;
+		$url = $this->invision_uploads_source_url . $_meta_value;
 
 		$post_year  = date("Y", strtotime( $user_avatar_update_date ) );
 		$post_month = date("m", strtotime( $user_avatar_update_date ) );
@@ -1823,8 +1885,6 @@ class InvisionV4 extends BBP_Converter_Base {
 			'post_date'         => $postdate,
 			'post_date_gmt'     => $postdate,
 		) );
-
-
 	}
 
 
